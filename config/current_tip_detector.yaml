@@ -1,0 +1,333 @@
+current_tip_detector_node:
+  ros__parameters:
+    current_slot_id: 3
+
+    slot_tip_types: ["spear", "fist", "palm", "palm", "fist", "spear"]
+
+    enable_slot_topic: false
+    current_slot_topic: "/weapon_tip_detector/current_slot_id"
+
+    depth_image_topic: "/camera/camera/depth/image_rect_raw"
+    rgb_image_topic: "/camera/camera/color/image_raw"
+    sync_queue_size: 10
+
+    depth_camera_info_topic: "/camera/camera/depth/camera_info"
+    color_camera_info_topic: "/camera/camera/color/camera_info"
+    extrinsics_topic: "/camera/camera/extrinsics/depth_to_color"
+
+    enable_cv_preview: true
+    preview_scale: 0.8
+    cv_wait_key_ms: 1
+
+    # 近距离 demo。机械最终安装未定，后续只需要改这里。
+    target_distance: 0.30
+    distance_tolerance: 0.18
+    valid_depth_min: 0.12
+    valid_depth_max: 0.70
+
+    background_percentile: 0.75
+    min_background_valid_pixels: 50
+    foreground_max_depth_diff: 0.18
+
+    morph_open_size: 0
+    morph_close_size: 5
+    mask_dilate_size: 5
+
+    # 调参阶段 false，避免历史帧误导。
+    # 给组长演示时如果画面稳定，可改 true。
+    stable_enabled: true
+    stable_history_size: 7
+    stable_accept_count: 4
+
+    detect_roi_height_ratio: 1.0
+
+    # distance / foreground / dark / candidate / combined / all
+    # all: 同时看 distance、foreground、dark；最适合调试。
+    display_mask_mode: "candidate"
+    debug_show_roi_info: false
+
+    # ROI 仍然按 slot 配置；实际比赛时 current_slot_id 变化后自动选对应 ROI 和 profile。
+    slot_roi_ratios: [
+      # slot 1: spear / 矛尖
+      0.41, 0.07, 0.18, 0.55,
+
+      # slot 2: fist / 拳
+      0.42, 0.18, 0.16, 0.38,
+
+      # slot 3: palm / 掌
+      0.37, 0.30, 0.28, 0.12,
+
+      # slot 4: palm / 掌
+      0.37, 0.30, 0.28, 0.12,
+
+      # slot 5: fist / 拳
+      0.42, 0.18, 0.16, 0.38,
+
+      # slot 6: spear / 矛尖
+      0.41, 0.07, 0.18, 0.55
+    ]
+
+    ############################################################
+    # spear profile
+    # 矛尖的特征会在“矛尖主体”和“下方连接杆/底座”之间切换。
+    # 所以这里不再强行用一套参数兼容所有角度，而是拆成：
+    # spear_head：偏向检测矛尖主体；
+    # spear_stem：偏向检测连接杆和底座区域。
+    # 但注意：spear_stem 不能单独确认 spear，必须有矛尖主体暗色支撑。
+    ############################################################
+    spear_enable_dual_profile: true
+
+    # spear_stem 不能单独确认 spear。
+    # 只有连接杆不算 spear；stem 上方/附近必须有矛尖主体暗色支撑。
+    spear_stem_require_head_support: true
+    spear_stem_head_support_above_ratio: 0.60
+    spear_stem_head_support_expand_x_ratio: 0.28
+    spear_stem_head_support_min_dark_pixels: 140
+    spear_stem_head_support_min_dark_ratio: 0.06
+
+    ############################################################
+    # spear_head profile
+    # 偏向矛尖主体：高、窄、暗色面积明显，形状接近竖向菱形。
+    # 新版 cpp 使用 spear_head_ 前缀；不要再用旧的 spear_ 前缀控制双 profile。
+    ############################################################
+    spear_head_candidate_mask_mode: "foreground_or_dark"
+    spear_head_foreground_min_depth_diff: 0.008
+    spear_head_min_component_area: 25
+    spear_head_min_candidate_score: 0.30
+    spear_head_max_component_area_ratio: 0.48
+    spear_head_require_depth_for_candidate: false
+
+    spear_head_ideal_aspect_w_over_h: 0.45
+    spear_head_aspect_tolerance: 0.90
+    spear_head_ideal_width_ratio: 0.42
+    spear_head_width_tolerance: 0.65
+    spear_head_ideal_height_ratio: 0.55
+    spear_head_height_tolerance: 0.70
+
+    spear_head_enable_position_score: true
+    spear_head_ideal_center_x_ratio: 0.50
+    spear_head_center_x_tolerance: 0.50
+    spear_head_ideal_center_y_ratio: 0.46
+    spear_head_center_y_tolerance: 0.60
+
+    spear_head_enable_roi_edge_suppression: true
+    spear_head_suppress_left_ratio: 0.00
+    spear_head_suppress_right_ratio: 0.00
+    spear_head_suppress_top_ratio: 0.00
+    spear_head_suppress_bottom_ratio: 0.22
+
+    spear_head_enable_rgb_dark_filter: true
+    spear_head_rgb_dark_filter_mode: "score"
+    spear_head_dark_gray_threshold: 90
+    spear_head_min_dark_ratio: 0.14
+
+    spear_head_shape_score_weight: 0.34
+    spear_head_depth_score_weight: 0.18
+    spear_head_area_score_weight: 0.14
+    spear_head_position_score_weight: 0.14
+    spear_head_dark_score_weight: 0.20
+
+    spear_head_min_width_ratio: 0.18
+    spear_head_min_height_ratio: 0.25
+    spear_head_min_fill_ratio: 0.18
+
+    ############################################################
+    # spear_stem profile
+    # 偏向连接杆/底座区域：面积小、偏竖直、深度结构更明显。
+    # 这套用于补 spear 在矛尖主体和连接杆交界处容易断检的问题。
+    # 但它不能单独确认 spear，必须通过上面的 head_support 检查。
+    ############################################################
+    spear_stem_candidate_mask_mode: "foreground_and_dark"
+    spear_stem_foreground_min_depth_diff: 0.010
+    spear_stem_min_component_area: 10
+    spear_stem_min_candidate_score: 0.34
+    spear_stem_max_component_area_ratio: 0.13
+    spear_stem_require_depth_for_candidate: true
+
+    spear_stem_ideal_aspect_w_over_h: 0.35
+    spear_stem_aspect_tolerance: 0.70
+    spear_stem_ideal_width_ratio: 0.22
+    spear_stem_width_tolerance: 0.38
+    spear_stem_ideal_height_ratio: 0.45
+    spear_stem_height_tolerance: 0.58
+
+    spear_stem_enable_position_score: true
+    spear_stem_ideal_center_x_ratio: 0.50
+    spear_stem_center_x_tolerance: 0.45
+    spear_stem_ideal_center_y_ratio: 0.64
+    spear_stem_center_y_tolerance: 0.40
+
+    spear_stem_enable_roi_edge_suppression: true
+    spear_stem_suppress_left_ratio: 0.00
+    spear_stem_suppress_right_ratio: 0.00
+    spear_stem_suppress_top_ratio: 0.00
+    spear_stem_suppress_bottom_ratio: 0.20
+
+    spear_stem_enable_rgb_dark_filter: true
+    spear_stem_rgb_dark_filter_mode: "score"
+    spear_stem_dark_gray_threshold: 95
+    spear_stem_min_dark_ratio: 0.12
+
+    spear_stem_shape_score_weight: 0.30
+    spear_stem_depth_score_weight: 0.25
+    spear_stem_area_score_weight: 0.12
+    spear_stem_position_score_weight: 0.18
+    spear_stem_dark_score_weight: 0.15
+
+    spear_stem_min_width_ratio: 0.04
+    spear_stem_min_height_ratio: 0.12
+    spear_stem_min_fill_ratio: 0.10
+
+    ############################################################
+    # fist profile
+    # 拳的特征会在“拳体主体”和“连接杆/下半部分”之间切换。
+    # 所以这里不再强行用一套拳体参数兼容所有角度，而是拆成：
+    # fist_body：偏向检测拳体主体；
+    # fist_stem：偏向检测连接杆和拳体下半部分。
+    # 但注意：fist_stem 不能单独确认 fist，必须有拳体暗色支撑。
+    ############################################################
+    enable_fist_dual_profile: true
+
+    # fist_stem 不能单独确认 fist。
+    # 只有连接杆不算 fist；stem 上方/附近必须有拳体暗色支撑。
+    fist_stem_require_body_support: true
+    fist_stem_body_support_above_ratio: 0.55
+    fist_stem_body_support_expand_x_ratio: 0.22
+    fist_stem_body_support_min_dark_pixels: 120
+    fist_stem_body_support_min_dark_ratio: 0.06
+
+    ############################################################
+    # fist_body profile
+    # 偏向拳体主体：块状、暗色面积大、形状更接近方块。
+    # 新版 cpp 使用 fist_body_ 前缀；不要再用旧的 fist_ 前缀。
+    ############################################################
+    fist_body_candidate_mask_mode: "foreground_and_dark"
+    fist_body_foreground_min_depth_diff: 0.010
+    fist_body_min_component_area: 36
+    fist_body_min_candidate_score: 0.36
+    fist_body_max_component_area_ratio: 0.25
+    fist_body_require_depth_for_candidate: true
+
+    fist_body_ideal_aspect_w_over_h: 0.85
+    fist_body_aspect_tolerance: 1.05
+    fist_body_ideal_width_ratio: 0.45
+    fist_body_width_tolerance: 0.68
+    fist_body_ideal_height_ratio: 0.48
+    fist_body_height_tolerance: 0.68
+
+    fist_body_enable_position_score: true
+    fist_body_ideal_center_x_ratio: 0.50
+    fist_body_center_x_tolerance: 0.50
+    fist_body_ideal_center_y_ratio: 0.48
+    fist_body_center_y_tolerance: 0.65
+
+    fist_body_enable_roi_edge_suppression: true
+    fist_body_suppress_left_ratio: 0.00
+    fist_body_suppress_right_ratio: 0.00
+    fist_body_suppress_top_ratio: 0.00
+    fist_body_suppress_bottom_ratio: 0.24
+
+    fist_body_enable_rgb_dark_filter: true
+    fist_body_rgb_dark_filter_mode: "score"
+    fist_body_dark_gray_threshold: 92
+    fist_body_min_dark_ratio: 0.18
+
+    fist_body_shape_score_weight: 0.36
+    fist_body_depth_score_weight: 0.18
+    fist_body_area_score_weight: 0.15
+    fist_body_position_score_weight: 0.15
+    fist_body_dark_score_weight: 0.16
+
+    fist_body_min_width_ratio: 0.16
+    fist_body_min_height_ratio: 0.24
+    fist_body_min_fill_ratio: 0.24
+
+    ############################################################
+    # fist_stem profile
+    # 偏向连接杆/拳体下半部分：面积小、偏竖直、深度结构更明显。
+    # 这套用于补 fist 在主体和杆子交界处容易断检的问题。
+    # 但它不能单独确认 fist，必须通过上面的 body_support 检查。
+    ############################################################
+    fist_stem_candidate_mask_mode: "foreground_and_dark"
+    fist_stem_foreground_min_depth_diff: 0.006
+    fist_stem_min_component_area: 12
+    fist_stem_min_candidate_score: 0.34
+    fist_stem_max_component_area_ratio: 0.13
+    fist_stem_require_depth_for_candidate: true
+
+    fist_stem_ideal_aspect_w_over_h: 0.35
+    fist_stem_aspect_tolerance: 0.65
+    fist_stem_ideal_width_ratio: 0.22
+    fist_stem_width_tolerance: 0.35
+    fist_stem_ideal_height_ratio: 0.42
+    fist_stem_height_tolerance: 0.55
+
+    fist_stem_enable_position_score: true
+    fist_stem_ideal_center_x_ratio: 0.50
+    fist_stem_center_x_tolerance: 0.45
+    fist_stem_ideal_center_y_ratio: 0.62
+    fist_stem_center_y_tolerance: 0.38
+
+    fist_stem_enable_roi_edge_suppression: true
+    fist_stem_suppress_left_ratio: 0.00
+    fist_stem_suppress_right_ratio: 0.00
+    fist_stem_suppress_top_ratio: 0.00
+    fist_stem_suppress_bottom_ratio: 0.20
+
+    fist_stem_enable_rgb_dark_filter: true
+    fist_stem_rgb_dark_filter_mode: "score"
+    fist_stem_dark_gray_threshold: 95
+    fist_stem_min_dark_ratio: 0.12
+
+    fist_stem_shape_score_weight: 0.30
+    fist_stem_depth_score_weight: 0.25
+    fist_stem_area_score_weight: 0.12
+    fist_stem_position_score_weight: 0.18
+    fist_stem_dark_score_weight: 0.15
+
+    ############################################################
+    # palm profile
+    # 掌：单 profile，不再拆 body/edge。
+    # 当前主要问题是候选横向连通块偏大，先允许合理的大掌面，
+    # 但同时用宽扁几何和 bottom suppression 控制误检。
+    ############################################################
+    palm_candidate_mask_mode: "foreground_and_dark"
+    palm_foreground_min_depth_diff: 0.012
+    palm_min_component_area: 28
+    palm_min_candidate_score: 0.42
+    palm_max_component_area_ratio: 0.34
+    palm_require_depth_for_candidate: true
+
+    palm_ideal_aspect_w_over_h: 3.00
+    palm_aspect_tolerance: 3.20
+    palm_ideal_width_ratio: 0.48
+    palm_width_tolerance: 0.90
+    palm_ideal_height_ratio: 0.18
+    palm_height_tolerance: 0.50
+
+    palm_min_width_ratio: 0.16
+    palm_min_height_ratio: 0.03
+    palm_min_fill_ratio: 0.08
+
+    palm_enable_position_score: true
+    palm_ideal_center_x_ratio: 0.50
+    palm_center_x_tolerance: 0.60
+    palm_ideal_center_y_ratio: 0.50
+    palm_center_y_tolerance: 0.60
+
+    palm_enable_roi_edge_suppression: true
+    palm_suppress_left_ratio: 0.00
+    palm_suppress_right_ratio: 0.00
+    palm_suppress_top_ratio: 0.00
+    palm_suppress_bottom_ratio: 0.20
+
+    palm_enable_rgb_dark_filter: true
+    palm_rgb_dark_filter_mode: "score"
+    palm_dark_gray_threshold: 105
+    palm_min_dark_ratio: 0.10
+
+    palm_shape_score_weight: 0.36
+    palm_depth_score_weight: 0.20
+    palm_area_score_weight: 0.08
+    palm_position_score_weight: 0.14
+    palm_dark_score_weight: 0.22

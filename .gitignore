@@ -1,0 +1,44 @@
+# ---- ROS / colcon build outputs ----
+build/
+install/
+log/
+
+# ---- CMake / compile outputs ----
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# ---- Python cache ----
+__pycache__/
+*.py[cod]
+
+# ---- VS Code / IDE ----
+.vscode/
+.idea/
+*.iml
+
+# ---- OS junk ----
+.DS_Store
+Thumbs.db
+
+# ---- Logs / temp ----
+*.log
+*.tmp
+tmp/
+
+# ---- Large/debug captured data ----
+*.bag
+*.db3
+*.mcap
+*.pcd
+*.ply
+*.mp4
+*.avi
+*.mov
+
+# ---- Generated images / reports, unless you intentionally want them ----
+*.png
+*.jpg
+*.jpeg
+*.pdf
