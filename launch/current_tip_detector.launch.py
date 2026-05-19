@@ -30,7 +30,7 @@ def generate_launch_description():
 
     current_tip_detector_node = Node(
         package='weapon_tip_detector',
-        executable='current_tip_detector_node',
+        executable='current_tip_detector_node_refactored',
         name='current_tip_detector_node',
         output='screen',
         parameters=[

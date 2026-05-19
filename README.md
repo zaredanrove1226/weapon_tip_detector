@@ -519,9 +519,9 @@ ros2 topic pub /weapon_tip_detector/current_slot_id std_msgs/msg/UInt8 "{data: 3
 
 ## 15\. 文件结构
 
-典型结构如下：
+当前版本已经对原来的单文件检测节点进行了结构重构。主要结构如下：
 
-```
+```text
 weapon_tip_detector
 ├── CMakeLists.txt
 ├── package.xml
@@ -532,8 +532,19 @@ weapon_tip_detector
 │   └── current_tip_detector.launch.py
 ├── include
 │   └── weapon_tip_detector
+│       ├── depth_projector.hpp
+│       ├── detection_pipeline.hpp
+│       ├── detector_profiles.hpp
+│       ├── detector_types.hpp
+│       └── detector_utils.hpp
 └── src
-    └── current_tip_detector_node.cpp
+    ├── current_tip_detector_node.cpp
+    ├── current_tip_detector_node_refactored.cpp
+    ├── depth_projector.cpp
+    ├── detection_pipeline.cpp
+    ├── detector_profiles.cpp
+    ├── detector_utils.cpp
+    └── preview_debugger.cpp
 ```
 
 ---
@@ -576,6 +587,7 @@ config/current_tip_detector.yaml
 * stable 历史帧判断；
 * `/weapon_tip_detector/current_present` 结果输出；
 * 可与串口节点通过 ROS topic 对接。
+* 代码结构重构，检测流程已从原来的单文件节点拆分为多个功能模块；
 
 本项目当前重点不是直接控制串口，而是向外提供稳定、简单、明确的检测结果接口：
 
@@ -586,3 +598,5 @@ std_msgs/msg/UInt8
 ```
 
 串口节点、上层状态机或其他 ROS 2 节点都可以基于该接口继续集成。
+
+需要注意的是，旧版 `current_tip_detector_node.cpp` 目前仅作为历史版本保留，后续开发和调试应以 `current_tip_detector_node_refactored.cpp` 为准。

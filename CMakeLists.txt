@@ -17,11 +17,16 @@ find_package(message_filters REQUIRED)
 find_package(realsense2_camera_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 
-add_executable(current_tip_detector_node
-  src/current_tip_detector_node.cpp
+add_executable(current_tip_detector_node_refactored
+  src/current_tip_detector_node_refactored.cpp
+  src/detector_utils.cpp
+  src/depth_projector.cpp
+  src/detector_profiles.cpp
+  src/detection_pipeline.cpp
+  src/preview_debugger.cpp
 )
 
-ament_target_dependencies(current_tip_detector_node
+ament_target_dependencies(current_tip_detector_node_refactored
   rclcpp
   std_msgs
   sensor_msgs
@@ -30,22 +35,26 @@ ament_target_dependencies(current_tip_detector_node
   realsense2_camera_msgs
 )
 
-target_link_libraries(current_tip_detector_node
+target_link_libraries(current_tip_detector_node_refactored
   ${OpenCV_LIBRARIES}
 )
 
-target_include_directories(current_tip_detector_node PUBLIC
+target_include_directories(current_tip_detector_node_refactored PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
   ${OpenCV_INCLUDE_DIRS}
 )
 
-install(TARGETS current_tip_detector_node
+install(TARGETS current_tip_detector_node_refactored
   DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(DIRECTORY include/
+  DESTINATION include
 )
 
 if(BUILD_TESTING)
