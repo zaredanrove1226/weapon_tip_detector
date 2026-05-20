@@ -35,7 +35,7 @@ current_tip_detector_node:
 
     # 调参阶段 false，避免历史帧误导。
     # 给组长演示时如果画面稳定，可改 true。
-    stable_enabled: true
+    stable_enabled: false
     stable_history_size: 7
     stable_accept_count: 4
 
@@ -43,28 +43,28 @@ current_tip_detector_node:
 
     # distance / foreground / dark / candidate / combined / all
     # all: 同时看 distance、foreground、dark；最适合调试。
-    display_mask_mode: "candidate"
+    display_mask_mode: "all"
     debug_show_roi_info: false
 
     # ROI 仍然按 slot 配置；实际比赛时 current_slot_id 变化后自动选对应 ROI 和 profile。
     slot_roi_ratios: [
       # slot 1: spear / 矛尖
-      0.41, 0.07, 0.18, 0.55,
+      0.60, 0.15, 0.18, 0.54,
 
       # slot 2: fist / 拳
-      0.42, 0.18, 0.16, 0.38,
+      0.67, 0.28, 0.17, 0.38,
 
       # slot 3: palm / 掌
-      0.37, 0.30, 0.28, 0.12,
+      0.66, 0.37, 0.17, 0.30,
 
       # slot 4: palm / 掌
-      0.37, 0.30, 0.28, 0.12,
+      0.66, 0.37, 0.17, 0.30,
 
       # slot 5: fist / 拳
-      0.42, 0.18, 0.16, 0.38,
+      0.67, 0.28, 0.17, 0.38,
 
       # slot 6: spear / 矛尖
-      0.41, 0.07, 0.18, 0.55
+      0.60, 0.15, 0.18, 0.54
     ]
 
     ############################################################
@@ -105,21 +105,26 @@ current_tip_detector_node:
     spear_head_height_tolerance: 0.70
 
     spear_head_enable_position_score: true
-    spear_head_ideal_center_x_ratio: 0.50
-    spear_head_center_x_tolerance: 0.50
-    spear_head_ideal_center_y_ratio: 0.46
-    spear_head_center_y_tolerance: 0.60
+    spear_head_ideal_center_x_ratio: 0.58
+    spear_head_center_x_tolerance: 0.36
+    spear_head_ideal_center_y_ratio: 0.45
+    spear_head_center_y_tolerance: 0.58
 
     spear_head_enable_roi_edge_suppression: true
-    spear_head_suppress_left_ratio: 0.00
-    spear_head_suppress_right_ratio: 0.00
+    spear_head_suppress_left_ratio: 0.18
+    spear_head_suppress_right_ratio: 0.10
     spear_head_suppress_top_ratio: 0.00
-    spear_head_suppress_bottom_ratio: 0.22
+    spear_head_suppress_bottom_ratio: 0.24
+
+    spear_head_enable_ignore_mask: true
+    spear_head_ignore_rects: [
+      0.00, 0.76, 0.20, 0.24
+    ]
 
     spear_head_enable_rgb_dark_filter: true
     spear_head_rgb_dark_filter_mode: "score"
-    spear_head_dark_gray_threshold: 90
-    spear_head_min_dark_ratio: 0.14
+    spear_head_dark_gray_threshold: 105
+    spear_head_min_dark_ratio: 0.10
 
     spear_head_shape_score_weight: 0.34
     spear_head_depth_score_weight: 0.18
@@ -201,12 +206,11 @@ current_tip_detector_node:
     # 偏向拳体主体：块状、暗色面积大、形状更接近方块。
     # 新版 cpp 使用 fist_body_ 前缀；不要再用旧的 fist_ 前缀。
     ############################################################
-    fist_body_candidate_mask_mode: "foreground_and_dark"
-    fist_body_foreground_min_depth_diff: 0.010
-    fist_body_min_component_area: 36
-    fist_body_min_candidate_score: 0.36
-    fist_body_max_component_area_ratio: 0.25
-    fist_body_require_depth_for_candidate: true
+    fist_body_candidate_mask_mode: "foreground_or_dark"
+    fist_body_min_component_area: 12
+    fist_body_min_candidate_score: 0.28
+    fist_body_max_component_area_ratio: 0.40
+    fist_body_require_depth_for_candidate: false
 
     fist_body_ideal_aspect_w_over_h: 0.85
     fist_body_aspect_tolerance: 1.05
@@ -216,31 +220,31 @@ current_tip_detector_node:
     fist_body_height_tolerance: 0.68
 
     fist_body_enable_position_score: true
-    fist_body_ideal_center_x_ratio: 0.50
-    fist_body_center_x_tolerance: 0.50
-    fist_body_ideal_center_y_ratio: 0.48
-    fist_body_center_y_tolerance: 0.65
+    fist_body_ideal_center_x_ratio: 0.58
+    fist_body_center_x_tolerance: 0.44
+    fist_body_ideal_center_y_ratio: 0.56
+    fist_body_center_y_tolerance: 0.58
 
     fist_body_enable_roi_edge_suppression: true
-    fist_body_suppress_left_ratio: 0.00
+    fist_body_suppress_left_ratio: 0.04
     fist_body_suppress_right_ratio: 0.00
     fist_body_suppress_top_ratio: 0.00
-    fist_body_suppress_bottom_ratio: 0.24
+    fist_body_suppress_bottom_ratio: 0.12
 
     fist_body_enable_rgb_dark_filter: true
-    fist_body_rgb_dark_filter_mode: "score"
-    fist_body_dark_gray_threshold: 92
-    fist_body_min_dark_ratio: 0.18
+    fist_body_rgb_dark_filter_mode: "filter"
+    fist_body_dark_gray_threshold: 75
+    fist_body_min_dark_ratio: 0.30
 
     fist_body_shape_score_weight: 0.36
     fist_body_depth_score_weight: 0.18
     fist_body_area_score_weight: 0.15
-    fist_body_position_score_weight: 0.15
-    fist_body_dark_score_weight: 0.16
+    fist_body_position_score_weight: 0.10
+    fist_body_dark_score_weight: 0.24
 
-    fist_body_min_width_ratio: 0.16
-    fist_body_min_height_ratio: 0.24
-    fist_body_min_fill_ratio: 0.24
+    fist_body_min_width_ratio: 0.08
+    fist_body_min_height_ratio: 0.10
+    fist_body_min_fill_ratio: 0.12
 
     ############################################################
     # fist_stem profile
@@ -250,10 +254,10 @@ current_tip_detector_node:
     ############################################################
     fist_stem_candidate_mask_mode: "foreground_and_dark"
     fist_stem_foreground_min_depth_diff: 0.006
-    fist_stem_min_component_area: 12
+    fist_stem_min_component_area: 8
     fist_stem_min_candidate_score: 0.34
     fist_stem_max_component_area_ratio: 0.13
-    fist_stem_require_depth_for_candidate: true
+    fist_stem_require_depth_for_candidate: false
 
     fist_stem_ideal_aspect_w_over_h: 0.35
     fist_stem_aspect_tolerance: 0.65
@@ -275,9 +279,9 @@ current_tip_detector_node:
     fist_stem_suppress_bottom_ratio: 0.20
 
     fist_stem_enable_rgb_dark_filter: true
-    fist_stem_rgb_dark_filter_mode: "score"
-    fist_stem_dark_gray_threshold: 95
-    fist_stem_min_dark_ratio: 0.12
+    fist_stem_rgb_dark_filter_mode: "filter"
+    fist_stem_dark_gray_threshold: 80
+    fist_stem_min_dark_ratio: 0.18
 
     fist_stem_shape_score_weight: 0.30
     fist_stem_depth_score_weight: 0.25
@@ -291,12 +295,12 @@ current_tip_detector_node:
     # 当前主要问题是候选横向连通块偏大，先允许合理的大掌面，
     # 但同时用宽扁几何和 bottom suppression 控制误检。
     ############################################################
-    palm_candidate_mask_mode: "foreground_and_dark"
+    palm_candidate_mask_mode: "foreground_or_dark"
     palm_foreground_min_depth_diff: 0.012
-    palm_min_component_area: 28
-    palm_min_candidate_score: 0.42
-    palm_max_component_area_ratio: 0.34
-    palm_require_depth_for_candidate: true
+    palm_min_component_area: 16
+    palm_min_candidate_score: 0.28
+    palm_max_component_area_ratio: 0.45
+    palm_require_depth_for_candidate: false
 
     palm_ideal_aspect_w_over_h: 3.00
     palm_aspect_tolerance: 3.20
@@ -305,25 +309,25 @@ current_tip_detector_node:
     palm_ideal_height_ratio: 0.18
     palm_height_tolerance: 0.50
 
-    palm_min_width_ratio: 0.16
-    palm_min_height_ratio: 0.03
-    palm_min_fill_ratio: 0.08
+    palm_min_width_ratio: 0.04
+    palm_min_height_ratio: 0.02
+    palm_min_fill_ratio: 0.05
 
     palm_enable_position_score: true
-    palm_ideal_center_x_ratio: 0.50
-    palm_center_x_tolerance: 0.60
-    palm_ideal_center_y_ratio: 0.50
-    palm_center_y_tolerance: 0.60
+    palm_ideal_center_x_ratio: 0.62
+    palm_center_x_tolerance: 0.42
+    palm_ideal_center_y_ratio: 0.72
+    palm_center_y_tolerance: 0.40
 
     palm_enable_roi_edge_suppression: true
-    palm_suppress_left_ratio: 0.00
+    palm_suppress_left_ratio: 0.04
     palm_suppress_right_ratio: 0.00
     palm_suppress_top_ratio: 0.00
-    palm_suppress_bottom_ratio: 0.20
+    palm_suppress_bottom_ratio: 0.00
 
     palm_enable_rgb_dark_filter: true
     palm_rgb_dark_filter_mode: "score"
-    palm_dark_gray_threshold: 105
+    palm_dark_gray_threshold: 120
     palm_min_dark_ratio: 0.10
 
     palm_shape_score_weight: 0.36

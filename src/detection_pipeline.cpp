@@ -425,6 +425,45 @@ cv::Mat DetectionPipeline::buildCandidateMask(
   return candidate_mask;
 }
 
+void DetectionPipeline::applyIgnoreMask(
+  cv::Mat & candidate_mask,
+  const cv::Rect & detect_roi,
+  const TipProfile & profile) const
+{
+  if (!profile.enable_ignore_mask || profile.ignore_rects.empty()) {
+    return;
+  }
+
+  if (candidate_mask.empty() || detect_roi.width <= 0 || detect_roi.height <= 0) {
+    return;
+  }
+
+  for (const auto & r : profile.ignore_rects) {
+    const double x_ratio = std::clamp(r.x, 0.0, 1.0);
+    const double y_ratio = std::clamp(r.y, 0.0, 1.0);
+    const double w_ratio = std::clamp(r.width, 0.0, 1.0);
+    const double h_ratio = std::clamp(r.height, 0.0, 1.0);
+
+    const int x = detect_roi.x + static_cast<int>(
+      std::lround(x_ratio * static_cast<double>(detect_roi.width)));
+    const int y = detect_roi.y + static_cast<int>(
+      std::lround(y_ratio * static_cast<double>(detect_roi.height)));
+    const int w = static_cast<int>(
+      std::lround(w_ratio * static_cast<double>(detect_roi.width)));
+    const int h = static_cast<int>(
+      std::lround(h_ratio * static_cast<double>(detect_roi.height)));
+
+    cv::Rect ignore_rect(x, y, std::max(0, w), std::max(0, h));
+    ignore_rect &= detect_roi;
+
+    if (ignore_rect.width <= 0 || ignore_rect.height <= 0) {
+      continue;
+    }
+
+    candidate_mask(ignore_rect).setTo(0);
+  }
+}
+
 bool DetectionPipeline::isSuppressedByRoiEdge(
   const Candidate & c,
   const TipProfile & profile) const
@@ -773,6 +812,8 @@ ProfileEvaluation DetectionPipeline::evaluateProfile(
     ev.dark_mask,
     detect_roi,
     profile);
+
+  applyIgnoreMask(ev.candidate_mask, detect_roi, profile);
 
   ev.foreground_pixels = cv::countNonZero(ev.foreground_mask(detect_roi));
   ev.dark_pixels = cv::countNonZero(ev.dark_mask(detect_roi));

@@ -4,6 +4,7 @@
 #include <opencv2/core.hpp>
 
 #include <string>
+#include <vector>
 
 namespace weapon_tip_detector
 {
@@ -44,6 +45,9 @@ struct TipProfile
   double suppress_right_ratio{0.00};
   double suppress_top_ratio{0.00};
   double suppress_bottom_ratio{0.12};
+
+  bool enable_ignore_mask{false};
+  std::vector<cv::Rect2d> ignore_rects;
 
   bool enable_rgb_dark_filter{true};
   std::string rgb_dark_filter_mode{"score"};  // off, score, filter

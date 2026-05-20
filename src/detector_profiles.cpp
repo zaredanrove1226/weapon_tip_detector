@@ -69,6 +69,9 @@ TipProfile defaultSpearHeadProfile()
   p.suppress_top_ratio = 0.00;
   p.suppress_bottom_ratio = 0.22;
 
+  p.enable_ignore_mask = false;
+  p.ignore_rects.clear();
+
   p.enable_rgb_dark_filter = true;
   p.rgb_dark_filter_mode = "score";
   p.dark_gray_threshold = 90;

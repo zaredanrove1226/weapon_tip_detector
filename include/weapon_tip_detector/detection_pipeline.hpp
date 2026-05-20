@@ -127,6 +127,11 @@ private:
     const cv::Rect & detect_roi,
     const TipProfile & profile) const;
 
+  void applyIgnoreMask(
+    cv::Mat & candidate_mask,
+    const cv::Rect & detect_roi,
+    const TipProfile & profile) const;
+
   bool isSuppressedByRoiEdge(
     const Candidate & candidate,
     const TipProfile & profile) const;

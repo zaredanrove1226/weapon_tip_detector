@@ -301,6 +301,33 @@ TipProfile CurrentTipDetectorNode::declareProfile(
   p.suppress_bottom_ratio = this->declare_parameter<double>(
     prefix + "_suppress_bottom_ratio", p.suppress_bottom_ratio);
 
+  p.enable_ignore_mask = this->declare_parameter<bool>(
+    prefix + "_enable_ignore_mask", p.enable_ignore_mask);
+
+  const std::vector<double> ignore_rect_values =
+    this->declare_parameter<std::vector<double>>(
+      prefix + "_ignore_rects",
+      std::vector<double>{});
+
+  p.ignore_rects.clear();
+
+  if (ignore_rect_values.size() % 4 != 0) {
+    RCLCPP_WARN(
+      this->get_logger(),
+      "%s_ignore_rects size is %zu, expected multiple of 4. Ignore mask disabled for this profile.",
+      prefix.c_str(),
+      ignore_rect_values.size());
+    p.enable_ignore_mask = false;
+  } else {
+    for (size_t i = 0; i + 3 < ignore_rect_values.size(); i += 4) {
+      p.ignore_rects.emplace_back(
+        ignore_rect_values.at(i + 0),
+        ignore_rect_values.at(i + 1),
+        ignore_rect_values.at(i + 2),
+        ignore_rect_values.at(i + 3));
+    }
+  }
+
   p.enable_rgb_dark_filter = this->declare_parameter<bool>(
     prefix + "_enable_rgb_dark_filter", p.enable_rgb_dark_filter);
   p.rgb_dark_filter_mode = this->declare_parameter<std::string>(
