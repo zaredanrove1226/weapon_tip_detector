@@ -49,10 +49,10 @@ current_tip_detector_node:
     # ROI 仍然按 slot 配置；实际比赛时 current_slot_id 变化后自动选对应 ROI 和 profile。
     slot_roi_ratios: [
       # slot 1: spear / 矛尖
-      0.60, 0.15, 0.18, 0.54,
+      0.68, 0.16, 0.14, 0.50,
 
       # slot 2: fist / 拳
-      0.67, 0.28, 0.17, 0.38,
+      0.64, 0.30, 0.24, 0.37,
 
       # slot 3: palm / 掌
       0.66, 0.37, 0.17, 0.30,
@@ -61,10 +61,10 @@ current_tip_detector_node:
       0.66, 0.37, 0.17, 0.30,
 
       # slot 5: fist / 拳
-      0.67, 0.28, 0.17, 0.38,
+      0.64, 0.30, 0.24, 0.37,
 
       # slot 6: spear / 矛尖
-      0.60, 0.15, 0.18, 0.54
+      0.68, 0.16, 0.14, 0.50
     ]
 
     ############################################################
@@ -118,7 +118,8 @@ current_tip_detector_node:
 
     spear_head_enable_ignore_mask: true
     spear_head_ignore_rects: [
-      0.00, 0.76, 0.20, 0.24
+      0.00, 0.76, 0.20, 0.24,
+      0.58, 0.00, 0.42, 1.00
     ]
 
     spear_head_enable_rgb_dark_filter: true
@@ -231,6 +232,14 @@ current_tip_detector_node:
     fist_body_suppress_top_ratio: 0.00
     fist_body_suppress_bottom_ratio: 0.12
 
+    fist_body_enable_ignore_mask: true
+    fist_body_ignore_rects: [
+      0.00, 0.00, 0.20, 1.00,
+      0.00, 0.00, 1.00, 0.22,
+      0.62, 0.00, 0.38, 1.00,
+      0.50, 0.20, 0.16, 0.34
+    ]
+
     fist_body_enable_rgb_dark_filter: true
     fist_body_rgb_dark_filter_mode: "filter"
     fist_body_dark_gray_threshold: 75
@@ -277,6 +286,14 @@ current_tip_detector_node:
     fist_stem_suppress_right_ratio: 0.00
     fist_stem_suppress_top_ratio: 0.00
     fist_stem_suppress_bottom_ratio: 0.20
+
+    fist_stem_enable_ignore_mask: true
+    fist_stem_ignore_rects: [
+      0.00, 0.00, 0.20, 1.00,
+      0.00, 0.00, 1.00, 0.22,
+      0.62, 0.00, 0.38, 1.00,
+      0.50, 0.20, 0.16, 0.34
+    ]
 
     fist_stem_enable_rgb_dark_filter: true
     fist_stem_rgb_dark_filter_mode: "filter"
