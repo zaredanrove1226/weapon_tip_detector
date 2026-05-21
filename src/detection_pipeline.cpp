@@ -229,6 +229,19 @@ DetectionResult DetectionPipeline::process(
 
       main_eval_raw_present = false;
     }
+  } else if (tip_type == "palm") {
+    main_eval = evaluatePalmByDensity(
+      "palm_density",
+      main_profile,
+      bgr_image,
+      color_depth,
+      distance_mask,
+      detect_roi,
+      result.background_depth);
+
+    result.active_profile = main_profile;
+    result.active_profile_name = "palm_density";
+    main_eval_raw_present = main_eval.rawPresent();
   } else {
     main_eval = evaluateProfile(
       tip_type,
@@ -831,6 +844,170 @@ ProfileEvaluation DetectionPipeline::evaluateProfile(
 
   ev.best.source_profile = name;
 
+  return ev;
+}
+
+cv::Rect DetectionPipeline::makeRelativeRect(
+  const cv::Rect & roi,
+  const double x_ratio,
+  const double y_ratio,
+  const double w_ratio,
+  const double h_ratio) const
+{
+  const double xr = std::clamp(x_ratio, 0.0, 1.0);
+  const double yr = std::clamp(y_ratio, 0.0, 1.0);
+  const double wr = std::clamp(w_ratio, 0.0, 1.0);
+  const double hr = std::clamp(h_ratio, 0.0, 1.0);
+
+  cv::Rect r(
+    roi.x + static_cast<int>(std::lround(xr * static_cast<double>(roi.width))),
+    roi.y + static_cast<int>(std::lround(yr * static_cast<double>(roi.height))),
+    static_cast<int>(std::lround(wr * static_cast<double>(roi.width))),
+    static_cast<int>(std::lround(hr * static_cast<double>(roi.height))));
+
+  r &= roi;
+  return r;
+}
+
+double DetectionPipeline::maskDensity(
+  const cv::Mat & mask,
+  const cv::Rect & roi,
+  int & pixels) const
+{
+  pixels = 0;
+
+  if (mask.empty() || roi.width <= 0 || roi.height <= 0) {
+    return 0.0;
+  }
+
+  pixels = cv::countNonZero(mask(roi));
+
+  return static_cast<double>(pixels) /
+    static_cast<double>(std::max(1, roi.area()));
+}
+
+ProfileEvaluation DetectionPipeline::evaluatePalmByDensity(
+  const std::string & name,
+  const TipProfile & profile,
+  const cv::Mat & bgr_image,
+  const cv::Mat & color_depth,
+  const cv::Mat & distance_mask,
+  const cv::Rect & detect_roi,
+  const double background_depth) const
+{
+  (void)distance_mask;
+
+  ProfileEvaluation ev;
+  ev.name = name;
+  ev.profile = profile;
+
+  ev.foreground_mask = buildForegroundMask(color_depth, detect_roi, background_depth, profile);
+  ev.dark_mask = buildDarkMask(bgr_image, detect_roi, profile);
+  ev.candidate_mask = cv::Mat::zeros(bgr_image.size(), CV_8UC1);
+
+  if (detect_roi.width <= 0 || detect_roi.height <= 0 || ev.dark_mask.empty()) {
+    ev.best.exists = false;
+    ev.best.accepted = false;
+    ev.best.rejected_reason = "invalid_roi";
+    return ev;
+  }
+
+  // 这三个区域对应你用天蓝色标出的人眼可见 palm 区域。
+  // 注意：坐标是 detect_roi 内归一化坐标，不是整张图坐标。
+  const cv::Rect body_left = makeRelativeRect(detect_roi, 0.18, 0.48, 0.24, 0.18);
+  const cv::Rect body_mid = makeRelativeRect(detect_roi, 0.35, 0.45, 0.27, 0.21);
+  const cv::Rect lower_stem = makeRelativeRect(detect_roi, 0.34, 0.62, 0.18, 0.28);
+
+  int left_pixels = 0;
+  int mid_pixels = 0;
+  int stem_pixels = 0;
+
+  const double left_density = maskDensity(ev.dark_mask, body_left, left_pixels);
+  const double mid_density = maskDensity(ev.dark_mask, body_mid, mid_pixels);
+  const double stem_density = maskDensity(ev.dark_mask, lower_stem, stem_pixels);
+
+  int votes = 0;
+
+  if (left_pixels >= 20 && left_density >= 0.08) {
+    ++votes;
+    ev.dark_mask(body_left).copyTo(ev.candidate_mask(body_left));
+  }
+
+  if (mid_pixels >= 20 && mid_density >= 0.08) {
+    ++votes;
+    ev.dark_mask(body_mid).copyTo(ev.candidate_mask(body_mid));
+  }
+
+  if (stem_pixels >= 15 && stem_density >= 0.06) {
+    ++votes;
+    ev.dark_mask(lower_stem).copyTo(ev.candidate_mask(lower_stem));
+  }
+
+  const int total_pixels = left_pixels + mid_pixels + stem_pixels;
+  const bool palm_present = votes >= 2 && total_pixels >= 50;
+
+  ev.foreground_pixels = cv::countNonZero(ev.foreground_mask(detect_roi));
+  ev.dark_pixels = cv::countNonZero(ev.dark_mask(detect_roi));
+  ev.candidate_pixels = cv::countNonZero(ev.candidate_mask(detect_roi));
+
+  ev.raw_component_count = votes;
+  ev.accepted_candidate_count = palm_present ? 1 : 0;
+
+  Candidate c;
+  c.exists = total_pixels > 0;
+  c.accepted = palm_present;
+  c.source_profile = name;
+  c.rejected_reason = palm_present ? "density_votes" : "density_low";
+
+  c.area = total_pixels;
+  c.mask_count = total_pixels;
+  c.dark_count = total_pixels;
+  c.dark_ratio = total_pixels > 0 ? 1.0 : 0.0;
+  c.depth_count = 0;
+  c.mean_depth = 0.0;
+  c.mean_depth_diff = 0.0;
+
+  c.final_score = static_cast<double>(votes) / 3.0;
+  c.shape_score = c.final_score;
+  c.area_score = std::min(1.0, static_cast<double>(total_pixels) / 120.0);
+  c.position_score = 1.0;
+  c.dark_score = c.dark_ratio;
+  c.depth_score = 0.0;
+
+  c.bbox = body_left | body_mid | lower_stem;
+  c.center = cv::Point2d(
+    static_cast<double>(c.bbox.x) + static_cast<double>(c.bbox.width) * 0.5,
+    static_cast<double>(c.bbox.y) + static_cast<double>(c.bbox.height) * 0.5);
+
+  c.center_x_ratio =
+    (c.center.x - static_cast<double>(detect_roi.x)) /
+    static_cast<double>(std::max(1, detect_roi.width));
+
+  c.center_y_ratio =
+    (c.center.y - static_cast<double>(detect_roi.y)) /
+    static_cast<double>(std::max(1, detect_roi.height));
+
+  c.width_ratio =
+    static_cast<double>(c.bbox.width) /
+    static_cast<double>(std::max(1, detect_roi.width));
+
+  c.height_ratio =
+    static_cast<double>(c.bbox.height) /
+    static_cast<double>(std::max(1, detect_roi.height));
+
+  c.area_ratio =
+    static_cast<double>(total_pixels) /
+    static_cast<double>(std::max(1, detect_roi.area()));
+
+  c.aspect_w_over_h =
+    static_cast<double>(c.bbox.width) /
+    static_cast<double>(std::max(1, c.bbox.height));
+
+  c.fill_ratio =
+    static_cast<double>(total_pixels) /
+    static_cast<double>(std::max(1, c.bbox.area()));
+
+  ev.best = c;
   return ev;
 }
 

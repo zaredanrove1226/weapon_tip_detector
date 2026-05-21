@@ -166,6 +166,27 @@ private:
     const cv::Rect & detect_roi,
     double background_depth) const;
 
+  ProfileEvaluation evaluatePalmByDensity(
+    const std::string & name,
+    const TipProfile & profile,
+    const cv::Mat & bgr_image,
+    const cv::Mat & color_depth,
+    const cv::Mat & distance_mask,
+    const cv::Rect & detect_roi,
+    double background_depth) const;
+
+  cv::Rect makeRelativeRect(
+    const cv::Rect & roi,
+    double x_ratio,
+    double y_ratio,
+    double w_ratio,
+    double h_ratio) const;
+
+  double maskDensity(
+    const cv::Mat & mask,
+    const cv::Rect & roi,
+    int & pixels) const;
+
   static Candidate chooseBestCandidate(
     const Candidate & a,
     const Candidate & b);
