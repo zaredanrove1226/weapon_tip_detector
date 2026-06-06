@@ -176,6 +176,10 @@ void CurrentTipDetectorNode::setupProfiles()
   fist_stem_profile_ = declareProfile("fist_stem", defaultFistStemProfile());
 
   palm_profile_ = declareProfile("palm", defaultPalmProfile());
+  enable_palm_dual_profile_ = this->declare_parameter<bool>(
+    "enable_palm_dual_profile", true);
+  palm_body_profile_ = declareProfile("palm_body", defaultPalmBodyProfile());
+  palm_stem_profile_ = declareProfile("palm_stem", defaultPalmStemProfile());
 }
 
 void CurrentTipDetectorNode::setupModules()
@@ -259,6 +263,13 @@ TipProfile CurrentTipDetectorNode::declareProfile(
   p.require_depth_for_candidate = this->declare_parameter<bool>(
     prefix + "_require_depth_for_candidate", p.require_depth_for_candidate);
 
+  p.enable_depth_behind_veto = this->declare_parameter<bool>(
+    prefix + "_enable_depth_behind_veto", p.enable_depth_behind_veto);
+  p.depth_behind_veto_min_count = this->declare_parameter<int>(
+    prefix + "_depth_behind_veto_min_count", p.depth_behind_veto_min_count);
+  p.depth_behind_veto_max_diff = this->declare_parameter<double>(
+    prefix + "_depth_behind_veto_max_diff", p.depth_behind_veto_max_diff);
+
   p.ideal_aspect_w_over_h = this->declare_parameter<double>(
     prefix + "_ideal_aspect_w_over_h", p.ideal_aspect_w_over_h);
   p.aspect_tolerance = this->declare_parameter<double>(
@@ -328,6 +339,40 @@ TipProfile CurrentTipDetectorNode::declareProfile(
     }
   }
 
+  p.enable_palm_body_core_check = this->declare_parameter<bool>(
+    prefix + "_enable_palm_body_core_check", p.enable_palm_body_core_check);
+
+  const std::vector<double> palm_body_core_rect_values =
+    this->declare_parameter<std::vector<double>>(
+      prefix + "_palm_body_core_rect",
+      std::vector<double>{
+        p.palm_body_core_rect.x,
+        p.palm_body_core_rect.y,
+        p.palm_body_core_rect.width,
+        p.palm_body_core_rect.height
+      });
+
+  if (palm_body_core_rect_values.size() == 4) {
+    p.palm_body_core_rect = cv::Rect2d(
+      palm_body_core_rect_values.at(0),
+      palm_body_core_rect_values.at(1),
+      palm_body_core_rect_values.at(2),
+      palm_body_core_rect_values.at(3));
+  } else {
+    RCLCPP_WARN(
+      this->get_logger(),
+      "%s_palm_body_core_rect size is %zu, expected 4. Keep default body core rect.",
+      prefix.c_str(),
+      palm_body_core_rect_values.size());
+  }
+
+  p.palm_body_core_min_pixels = this->declare_parameter<int>(
+    prefix + "_palm_body_core_min_pixels", p.palm_body_core_min_pixels);
+  p.palm_body_core_min_density = this->declare_parameter<double>(
+    prefix + "_palm_body_core_min_density", p.palm_body_core_min_density);
+  p.palm_body_core_min_dark_ratio = this->declare_parameter<double>(
+    prefix + "_palm_body_core_min_dark_ratio", p.palm_body_core_min_dark_ratio);
+
   p.enable_rgb_dark_filter = this->declare_parameter<bool>(
     prefix + "_enable_rgb_dark_filter", p.enable_rgb_dark_filter);
   p.rgb_dark_filter_mode = this->declare_parameter<std::string>(
@@ -394,6 +439,8 @@ ProfileBundle CurrentTipDetectorNode::makeProfileBundle() const
   bundle.fist_stem = fist_stem_profile_;
 
   bundle.palm = palm_profile_;
+  bundle.palm_body = palm_body_profile_;
+  bundle.palm_stem = palm_stem_profile_;
   return bundle;
 }
 
@@ -489,6 +536,7 @@ DetectionPipelineConfig CurrentTipDetectorNode::makeDetectionPipelineConfig() co
 
   config.enable_fist_dual_profile = enable_fist_dual_profile_;
   config.spear_enable_dual_profile = spear_enable_dual_profile_;
+  config.enable_palm_dual_profile = enable_palm_dual_profile_;
 
   config.fist_stem_body_support.require_support = fist_stem_require_body_support_;
   config.fist_stem_body_support.above_ratio = fist_stem_body_support_above_ratio_;

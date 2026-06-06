@@ -166,6 +166,9 @@ private:
   TipProfile fist_stem_profile_;
 
   TipProfile palm_profile_;
+  bool enable_palm_dual_profile_{true};
+  TipProfile palm_body_profile_;
+  TipProfile palm_stem_profile_;
 
   std::unique_ptr<DepthProjector> depth_projector_;
   std::unique_ptr<DetectionPipeline> detection_pipeline_;
