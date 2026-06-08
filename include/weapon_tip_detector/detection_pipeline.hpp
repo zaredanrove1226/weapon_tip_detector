@@ -40,7 +40,6 @@ struct DetectionPipelineConfig
 
   bool enable_fist_dual_profile{true};
   bool spear_enable_dual_profile{true};
-  bool enable_palm_dual_profile{true};
 
   SupportRuleConfig fist_stem_body_support;
   SupportRuleConfig spear_stem_head_support;
@@ -57,8 +56,6 @@ struct ProfileBundle
   TipProfile fist_stem;
 
   TipProfile palm;
-  TipProfile palm_body;
-  TipProfile palm_stem;
 };
 
 struct DetectionResult
@@ -168,59 +165,6 @@ private:
     const cv::Mat & distance_mask,
     const cv::Rect & detect_roi,
     double background_depth) const;
-
-  ProfileEvaluation evaluatePalmByDensity(
-    const std::string & name,
-    const TipProfile & profile,
-    const cv::Mat & bgr_image,
-    const cv::Mat & color_depth,
-    const cv::Mat & distance_mask,
-    const cv::Rect & detect_roi,
-    double background_depth) const;
-
-  ProfileEvaluation evaluatePalmCoreFirst(
-    const std::string & name,
-    const TipProfile & profile,
-    const cv::Mat & bgr_image,
-    const cv::Mat & color_depth,
-    const cv::Mat & distance_mask,
-    const cv::Rect & detect_roi,
-    double background_depth) const;
-
-  cv::Rect makeExpandedPalmCoreRect(
-    const cv::Rect & detect_roi,
-    const cv::Rect & core_roi,
-    const TipProfile & profile) const;
-
-  bool isPalmCoreStrongPass(
-    const ProfileEvaluation & ev,
-    const TipProfile & profile,
-    std::string & reason) const;
-
-  bool isPalmCoreWeakEvidence(
-    const ProfileEvaluation & ev,
-    const TipProfile & profile,
-    std::string & reason) const;
-
-  bool isPalmExpandedPass(
-    const Candidate & candidate,
-    const cv::Rect & expanded_roi,
-    const cv::Rect & core_roi,
-    const TipProfile & profile,
-    bool very_strong,
-    std::string & reason) const;
-
-  cv::Rect makeRelativeRect(
-    const cv::Rect & roi,
-    double x_ratio,
-    double y_ratio,
-    double w_ratio,
-    double h_ratio) const;
-
-  double maskDensity(
-    const cv::Mat & mask,
-    const cv::Rect & roi,
-    int & pixels) const;
 
   static Candidate chooseBestCandidate(
     const Candidate & a,

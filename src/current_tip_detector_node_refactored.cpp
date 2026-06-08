@@ -113,6 +113,72 @@ void CurrentTipDetectorNode::declareAndLoadParameters()
       0.41, 0.07, 0.18, 0.55
     });
 
+  // --- 新增 PalmReference 参数 ---
+  palm_reference_enable_ =
+      this->declare_parameter<bool>("palm_reference_enable", false);
+
+  // slot3
+  {
+      const std::string rgb_path =
+          this->declare_parameter<std::string>("palm_reference_slot3_empty_rgb_path", "");
+      const std::string depth_path =
+          this->declare_parameter<std::string>("palm_reference_slot3_empty_depth_path", "");
+
+      palm_reference_slot3_params_.empty_rgb_path = resolvePackagePath(rgb_path);
+      palm_reference_slot3_params_.empty_depth_path = resolvePackagePath(depth_path);
+
+      palm_reference_slot3_params_.dark_gray_threshold =
+          this->declare_parameter<int>("palm_reference_slot3_dark_gray_threshold", 90);
+      palm_reference_slot3_params_.rgb_diff_threshold =
+          this->declare_parameter<int>("palm_reference_slot3_rgb_diff_threshold", 35);
+      palm_reference_slot3_params_.depth_delta =
+          this->declare_parameter<double>("palm_reference_slot3_depth_delta", 0.04);
+      palm_reference_slot3_params_.allow_depth_hole =
+          this->declare_parameter<bool>("palm_reference_slot3_allow_depth_hole", true);
+
+      palm_reference_slot3_params_.min_area =
+          this->declare_parameter<int>("palm_reference_slot3_min_area", 300);
+      palm_reference_slot3_params_.min_width =
+          this->declare_parameter<int>("palm_reference_slot3_min_width", 40);
+      palm_reference_slot3_params_.min_height =
+          this->declare_parameter<int>("palm_reference_slot3_min_height", 10);
+      palm_reference_slot3_params_.min_aspect_ratio =
+          this->declare_parameter<double>("palm_reference_slot3_min_aspect_ratio", 1.5);
+      palm_reference_slot3_params_.min_fill_ratio =
+          this->declare_parameter<double>("palm_reference_slot3_min_fill_ratio", 0.18);
+  }
+
+  // slot4
+  {
+      const std::string rgb_path =
+          this->declare_parameter<std::string>("palm_reference_slot4_empty_rgb_path", "");
+      const std::string depth_path =
+          this->declare_parameter<std::string>("palm_reference_slot4_empty_depth_path", "");
+
+      palm_reference_slot4_params_.empty_rgb_path = resolvePackagePath(rgb_path);
+      palm_reference_slot4_params_.empty_depth_path = resolvePackagePath(depth_path);
+
+      palm_reference_slot4_params_.dark_gray_threshold =
+          this->declare_parameter<int>("palm_reference_slot4_dark_gray_threshold", 90);
+      palm_reference_slot4_params_.rgb_diff_threshold =
+          this->declare_parameter<int>("palm_reference_slot4_rgb_diff_threshold", 35);
+      palm_reference_slot4_params_.depth_delta =
+          this->declare_parameter<double>("palm_reference_slot4_depth_delta", 0.04);
+      palm_reference_slot4_params_.allow_depth_hole =
+          this->declare_parameter<bool>("palm_reference_slot4_allow_depth_hole", true);
+
+      palm_reference_slot4_params_.min_area =
+          this->declare_parameter<int>("palm_reference_slot4_min_area", 300);
+      palm_reference_slot4_params_.min_width =
+          this->declare_parameter<int>("palm_reference_slot4_min_width", 40);
+      palm_reference_slot4_params_.min_height =
+          this->declare_parameter<int>("palm_reference_slot4_min_height", 10);
+      palm_reference_slot4_params_.min_aspect_ratio =
+          this->declare_parameter<double>("palm_reference_slot4_min_aspect_ratio", 1.5);
+      palm_reference_slot4_params_.min_fill_ratio =
+          this->declare_parameter<double>("palm_reference_slot4_min_fill_ratio", 0.18);
+  }
+
   if (slot_tip_types_.size() != 6) {
     RCLCPP_WARN(
       this->get_logger(),
@@ -176,10 +242,6 @@ void CurrentTipDetectorNode::setupProfiles()
   fist_stem_profile_ = declareProfile("fist_stem", defaultFistStemProfile());
 
   palm_profile_ = declareProfile("palm", defaultPalmProfile());
-  enable_palm_dual_profile_ = this->declare_parameter<bool>(
-    "enable_palm_dual_profile", true);
-  palm_body_profile_ = declareProfile("palm_body", defaultPalmBodyProfile());
-  palm_stem_profile_ = declareProfile("palm_stem", defaultPalmStemProfile());
 }
 
 void CurrentTipDetectorNode::setupModules()
@@ -187,6 +249,23 @@ void CurrentTipDetectorNode::setupModules()
   depth_projector_ = std::make_unique<DepthProjector>(makeDepthProjectorConfig());
   detection_pipeline_ = std::make_unique<DetectionPipeline>(makeDetectionPipelineConfig());
   preview_debugger_ = std::make_unique<PreviewDebugger>(makePreviewDebuggerConfig());
+
+  if (palm_reference_enable_) {
+      bool ok3 = palm_reference_detector_.loadReference(3, palm_reference_slot3_params_);
+      bool ok4 = palm_reference_detector_.loadReference(4, palm_reference_slot4_params_);
+
+      RCLCPP_INFO(this->get_logger(), "Palm reference slot3 load: %s, rgb=%s, depth=%s",
+                  ok3 ? "ok" : "failed",
+                  palm_reference_slot3_params_.empty_rgb_path.c_str(),
+                  palm_reference_slot3_params_.empty_depth_path.c_str());
+
+      RCLCPP_INFO(this->get_logger(), "Palm reference slot4 load: %s, rgb=%s, depth=%s",
+                  ok4 ? "ok" : "failed",
+                  palm_reference_slot4_params_.empty_rgb_path.c_str(),
+                  palm_reference_slot4_params_.empty_depth_path.c_str());
+  } else {
+      RCLCPP_INFO(this->get_logger(), "Palm reference diff disabled.");
+  }
 
   preview_debugger_->createWindowIfEnabled();
 }
@@ -242,6 +321,31 @@ void CurrentTipDetectorNode::setupRosInterfaces()
     extrinsics_topic_,
     extrinsics_transient_qos,
     std::bind(&CurrentTipDetectorNode::extrinsicsCallback, this, std::placeholders::_1));
+}
+
+std::string CurrentTipDetectorNode::resolvePackagePath(
+  const std::string & path) const
+{
+  if (path.empty()) {
+    return "";
+  }
+
+  if (path.front() == '/') {
+    return path;
+  }
+
+  try {
+    const std::string share_dir =
+      ament_index_cpp::get_package_share_directory("weapon_tip_detector");
+    return share_dir + "/" + path;
+  } catch (const std::exception & e) {
+    RCLCPP_WARN(
+      this->get_logger(),
+      "Failed to resolve package share path for '%s': %s. Use raw path.",
+      path.c_str(),
+      e.what());
+    return path;
+  }
 }
 
 TipProfile CurrentTipDetectorNode::declareProfile(
@@ -339,40 +443,6 @@ TipProfile CurrentTipDetectorNode::declareProfile(
     }
   }
 
-  p.enable_palm_body_core_check = this->declare_parameter<bool>(
-    prefix + "_enable_palm_body_core_check", p.enable_palm_body_core_check);
-
-  const std::vector<double> palm_body_core_rect_values =
-    this->declare_parameter<std::vector<double>>(
-      prefix + "_palm_body_core_rect",
-      std::vector<double>{
-        p.palm_body_core_rect.x,
-        p.palm_body_core_rect.y,
-        p.palm_body_core_rect.width,
-        p.palm_body_core_rect.height
-      });
-
-  if (palm_body_core_rect_values.size() == 4) {
-    p.palm_body_core_rect = cv::Rect2d(
-      palm_body_core_rect_values.at(0),
-      palm_body_core_rect_values.at(1),
-      palm_body_core_rect_values.at(2),
-      palm_body_core_rect_values.at(3));
-  } else {
-    RCLCPP_WARN(
-      this->get_logger(),
-      "%s_palm_body_core_rect size is %zu, expected 4. Keep default body core rect.",
-      prefix.c_str(),
-      palm_body_core_rect_values.size());
-  }
-
-  p.palm_body_core_min_pixels = this->declare_parameter<int>(
-    prefix + "_palm_body_core_min_pixels", p.palm_body_core_min_pixels);
-  p.palm_body_core_min_density = this->declare_parameter<double>(
-    prefix + "_palm_body_core_min_density", p.palm_body_core_min_density);
-  p.palm_body_core_min_dark_ratio = this->declare_parameter<double>(
-    prefix + "_palm_body_core_min_dark_ratio", p.palm_body_core_min_dark_ratio);
-
   p.enable_rgb_dark_filter = this->declare_parameter<bool>(
     prefix + "_enable_rgb_dark_filter", p.enable_rgb_dark_filter);
   p.rgb_dark_filter_mode = this->declare_parameter<std::string>(
@@ -439,8 +509,6 @@ ProfileBundle CurrentTipDetectorNode::makeProfileBundle() const
   bundle.fist_stem = fist_stem_profile_;
 
   bundle.palm = palm_profile_;
-  bundle.palm_body = palm_body_profile_;
-  bundle.palm_stem = palm_stem_profile_;
   return bundle;
 }
 
@@ -536,7 +604,6 @@ DetectionPipelineConfig CurrentTipDetectorNode::makeDetectionPipelineConfig() co
 
   config.enable_fist_dual_profile = enable_fist_dual_profile_;
   config.spear_enable_dual_profile = spear_enable_dual_profile_;
-  config.enable_palm_dual_profile = enable_palm_dual_profile_;
 
   config.fist_stem_body_support.require_support = fist_stem_require_body_support_;
   config.fist_stem_body_support.above_ratio = fist_stem_body_support_above_ratio_;
@@ -712,15 +779,61 @@ void CurrentTipDetectorNode::syncedImageCallback(
   const std::string tip_type = expectedTipType(current_slot_id_);
   const TipProfile main_profile = profileForType(tip_type);
 
-  DetectionResult result = detection_pipeline_->process(
-    preview_bgr,
-    color_depth,
-    distance_mask,
-    display_roi,
-    detect_roi,
-    tip_type,
-    main_profile,
-    makeProfileBundle());
+  DetectionResult result;
+
+  const bool use_palm_reference =
+      palm_reference_enable_ &&
+      tip_type == "palm" &&
+      (current_slot_id_ == 3 || current_slot_id_ == 4);
+
+  if (use_palm_reference) {
+      // 选择 slot 参数
+      const PalmReferenceSlotParams & ref_params =
+          (current_slot_id_ == 3) ? palm_reference_slot3_params_ : palm_reference_slot4_params_;
+
+      // 先加载 reference，如果没加载就打印 warn
+      if (!palm_reference_detector_.loadReference(current_slot_id_, ref_params)) {
+          RCLCPP_WARN(this->get_logger(),
+                      "Palm reference images not loaded for slot %d. Using normal detection.", 
+                      current_slot_id_);
+          result = detection_pipeline_->process(
+              preview_bgr,
+              color_depth,
+              distance_mask,
+              display_roi,
+              detect_roi,
+              tip_type,
+              main_profile,
+              makeProfileBundle());
+      } else {
+          // 执行 palm reference evaluate
+          const PalmReferenceResult ref_result =
+              palm_reference_detector_.evaluate(
+                  current_slot_id_,
+                  preview_bgr,
+                  color_depth,
+                  detect_roi);
+
+          result = convertPalmReferenceResultToDetectionResult(
+              ref_result,
+              tip_type,
+              main_profile,
+              display_roi,
+              detect_roi,
+              distance_mask);
+      }
+  } else {
+      // 普通 pipeline
+      result = detection_pipeline_->process(
+          preview_bgr,
+          color_depth,
+          distance_mask,
+          display_roi,
+          detect_roi,
+          tip_type,
+          main_profile,
+          makeProfileBundle());
+  }
 
   publishCurrentPresent(result.stable_present);
 
@@ -730,6 +843,132 @@ void CurrentTipDetectorNode::syncedImageCallback(
   }
 
   logDetectionResult(result);
+}
+
+DetectionResult CurrentTipDetectorNode::convertPalmReferenceResultToDetectionResult(
+  const PalmReferenceResult & ref,
+  const std::string & tip_type,
+  const TipProfile & main_profile,
+  const cv::Rect & display_roi,
+  const cv::Rect & detect_roi,
+  const cv::Mat & distance_mask) const
+{
+  DetectionResult result;
+
+  TipProfile ref_profile = main_profile;
+  ref_profile.candidate_mask_mode = "reference_diff";
+
+  result.tip_type = tip_type;
+  result.active_profile_name = "palm_reference_diff";
+  result.active_profile = ref_profile;
+
+  result.display_roi = display_roi;
+  result.detect_roi = detect_roi;
+  result.distance_mask = distance_mask;
+
+  result.raw_present = ref.raw_present;
+  result.stable_present = ref.raw_present;
+
+  result.background_depth = 0.0;
+  result.background_valid_count = 0;
+
+  result.distance_pixels = 0;
+  if (!distance_mask.empty()) {
+    const cv::Rect safe_roi =
+      detect_roi & cv::Rect(0, 0, distance_mask.cols, distance_mask.rows);
+    if (safe_roi.area() > 0) {
+      result.distance_pixels = cv::countNonZero(distance_mask(safe_roi));
+    }
+  }
+
+  ProfileEvaluation ev;
+  ev.name = "palm_reference_diff";
+  ev.profile = ref_profile;
+
+  ev.foreground_mask = ref.depth_diff_mask;
+  ev.dark_mask = ref.rgb_diff_mask;
+  ev.candidate_mask = ref.candidate_mask;
+
+  auto countInRoi = [&detect_roi](const cv::Mat & mask) -> int {
+    if (mask.empty()) {
+      return 0;
+    }
+
+    const cv::Rect safe_roi =
+      detect_roi & cv::Rect(0, 0, mask.cols, mask.rows);
+
+    if (safe_roi.area() <= 0) {
+      return 0;
+    }
+
+    return cv::countNonZero(mask(safe_roi));
+  };
+
+  ev.foreground_pixels = countInRoi(ref.depth_diff_mask);
+  ev.dark_pixels = countInRoi(ref.rgb_diff_mask);
+  ev.candidate_pixels = countInRoi(ref.candidate_mask);
+  ev.raw_component_count = ref.raw_component_count;
+  ev.accepted_candidate_count = ref.raw_present ? 1 : 0;
+
+  Candidate best;
+  best.exists = ref.best_bbox.area() > 0;
+  best.accepted = ref.raw_present;
+  best.bbox = ref.best_bbox;
+  best.area = ref.best_area > 0 ? ref.best_area : ref.best_bbox.area();
+  best.final_score = ref.final_score;
+  best.rejected_reason = ref.rejected_reason;
+  best.source_profile = "palm_reference_diff";
+
+  if (ref.best_bbox.area() > 0 && detect_roi.area() > 0) {
+    best.center = cv::Point2d(
+      ref.best_bbox.x + ref.best_bbox.width * 0.5,
+      ref.best_bbox.y + ref.best_bbox.height * 0.5);
+
+    best.width_ratio =
+      static_cast<double>(ref.best_bbox.width) /
+      static_cast<double>(std::max(1, detect_roi.width));
+
+    best.height_ratio =
+      static_cast<double>(ref.best_bbox.height) /
+      static_cast<double>(std::max(1, detect_roi.height));
+
+    best.area_ratio =
+      static_cast<double>(best.area) /
+      static_cast<double>(std::max(1, detect_roi.area()));
+
+    best.aspect_w_over_h =
+      static_cast<double>(ref.best_bbox.width) /
+      static_cast<double>(std::max(1, ref.best_bbox.height));
+
+    best.fill_ratio =
+      static_cast<double>(best.area) /
+      static_cast<double>(
+        std::max(1, ref.best_bbox.width * ref.best_bbox.height));
+
+    best.center_x_ratio =
+      (best.center.x - detect_roi.x) /
+      static_cast<double>(std::max(1, detect_roi.width));
+
+    best.center_y_ratio =
+      (best.center.y - detect_roi.y) /
+      static_cast<double>(std::max(1, detect_roi.height));
+
+    best.depth_count = countInRoi(ref.depth_diff_mask);
+    best.dark_count = countInRoi(ref.rgb_diff_mask);
+    best.mask_count = countInRoi(ref.candidate_mask);
+
+    if (best.mask_count > 0) {
+      best.dark_ratio =
+        static_cast<double>(best.dark_count) /
+        static_cast<double>(best.mask_count);
+    }
+  }
+
+  ev.best = best;
+
+  result.main_eval = ev;
+
+  return result;
 }
 
 void CurrentTipDetectorNode::publishCurrentPresent(const bool present)

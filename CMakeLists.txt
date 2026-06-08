@@ -24,6 +24,7 @@ add_executable(current_tip_detector_node_refactored
   src/detector_profiles.cpp
   src/detection_pipeline.cpp
   src/preview_debugger.cpp
+  src/palm_reference_detector.cpp
 )
 
 ament_target_dependencies(current_tip_detector_node_refactored

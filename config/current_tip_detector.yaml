@@ -58,7 +58,7 @@ current_tip_detector_node:
       0.66, 0.37, 0.17, 0.30,
 
       # slot 4: palm / 掌
-      0.550, 0.550, 0.232, 0.377,
+      0.580, 0.572, 0.180, 0.301,
 
       # slot 5: fist / 拳
       0.590, 0.500, 0.190, 0.360,
@@ -312,169 +312,28 @@ current_tip_detector_node:
     fist_stem_position_score_weight: 0.18
     fist_stem_dark_score_weight: 0.15
 
-    ############################################################
-    # palm dual profile
-    # palm_body 可以确认 palm；palm_stem 只能辅助，不能单独确认。
-    ############################################################
-    enable_palm_dual_profile: true
+    palm_reference_enable: true
 
-    ############################################################
-    # palm profile
-    # 旧 palm_density fallback 参数，暂时保留。
-    # 注意：dual profile 开启时，正常不会优先走这里。
-    ############################################################
-    palm_candidate_mask_mode: "foreground_or_dark"
-    palm_foreground_min_depth_diff: 0.012
-    palm_min_component_area: 16
-    palm_min_candidate_score: 0.28
-    palm_max_component_area_ratio: 0.45
-    palm_require_depth_for_candidate: false
+    palm_reference_slot3_empty_rgb_path: "config/reference/slot3_empty_rgb.png"
+    palm_reference_slot3_empty_depth_path: "config/reference/slot3_empty_depth.png"
+    palm_reference_slot3_dark_gray_threshold: 90
+    palm_reference_slot3_rgb_diff_threshold: 35
+    palm_reference_slot3_depth_delta: 0.04
+    palm_reference_slot3_allow_depth_hole: true
+    palm_reference_slot3_min_area: 300
+    palm_reference_slot3_min_width: 40
+    palm_reference_slot3_min_height: 10
+    palm_reference_slot3_min_aspect_ratio: 1.5
+    palm_reference_slot3_min_fill_ratio: 0.18
 
-    palm_ideal_aspect_w_over_h: 3.00
-    palm_aspect_tolerance: 3.20
-    palm_ideal_width_ratio: 0.48
-    palm_width_tolerance: 0.90
-    palm_ideal_height_ratio: 0.18
-    palm_height_tolerance: 0.50
-
-    palm_min_width_ratio: 0.04
-    palm_min_height_ratio: 0.02
-    palm_min_fill_ratio: 0.05
-
-    palm_enable_position_score: true
-    palm_ideal_center_x_ratio: 0.62
-    palm_center_x_tolerance: 0.42
-    palm_ideal_center_y_ratio: 0.72
-    palm_center_y_tolerance: 0.40
-
-    palm_enable_roi_edge_suppression: true
-    palm_suppress_left_ratio: 0.04
-    palm_suppress_right_ratio: 0.00
-    palm_suppress_top_ratio: 0.00
-    palm_suppress_bottom_ratio: 0.00
-
-    palm_enable_rgb_dark_filter: true
-    palm_rgb_dark_filter_mode: "score"
-    palm_dark_gray_threshold: 120
-    palm_min_dark_ratio: 0.10
-
-    palm_shape_score_weight: 0.36
-    palm_depth_score_weight: 0.20
-    palm_area_score_weight: 0.08
-    palm_position_score_weight: 0.14
-    palm_dark_score_weight: 0.22
-
-    palm_enable_palm_body_core_check: true
-    palm_palm_body_core_rect: [0.28, 0.46, 0.42, 0.20]
-    palm_palm_body_core_min_pixels: 180
-    palm_palm_body_core_min_density: 0.18
-    palm_palm_body_core_min_dark_ratio: 0.80
-
-    ############################################################
-    # palm_body profile
-    # 掌面主体：这部分给新版 palm_body_density 用。
-    # 重点不是吃整个 ROI，而是在 ROI 内只看掌面应该出现的局部区域。
-    ############################################################
-    palm_body_candidate_mask_mode: "foreground_or_dark"
-    palm_body_foreground_min_depth_diff: 0.008
-    palm_body_min_component_area: 300
-    palm_body_min_candidate_score: 0.30
-    palm_body_max_component_area_ratio: 0.36
-    palm_body_require_depth_for_candidate: false
-
-    palm_body_ideal_aspect_w_over_h: 2.80
-    palm_body_aspect_tolerance: 2.00
-    palm_body_ideal_width_ratio: 0.40
-    palm_body_width_tolerance: 0.36
-    palm_body_ideal_height_ratio: 0.18
-    palm_body_height_tolerance: 0.18
-
-    # 这几个给 evaluatePalmByDensity 里的 body component 检查用。
-    # 先放宽一点，避免真 palm 过不了。
-    palm_body_min_width_ratio: 0.08
-    palm_body_min_height_ratio: 0.04
-    palm_body_min_fill_ratio: 0.08
-
-    palm_body_enable_position_score: true
-    palm_body_ideal_center_x_ratio: 0.45
-    palm_body_center_x_tolerance: 0.34
-    palm_body_ideal_center_y_ratio: 0.42
-    palm_body_center_y_tolerance: 0.28
-
-    palm_body_enable_roi_edge_suppression: true
-    palm_body_suppress_left_ratio: 0.04
-    palm_body_suppress_right_ratio: 0.04
-    palm_body_suppress_top_ratio: 0.00
-    palm_body_suppress_bottom_ratio: 0.32
-
-    palm_body_enable_ignore_mask: false
-    palm_body_ignore_rects: [ [0.0, 0.0, 0.0, 0.0] ]
-
-    palm_body_enable_rgb_dark_filter: true
-    palm_body_rgb_dark_filter_mode: "filter"
-    palm_body_dark_gray_threshold: 105
-    palm_body_min_dark_ratio: 0.18
-
-    palm_body_shape_score_weight: 0.38
-    palm_body_depth_score_weight: 0.10
-    palm_body_area_score_weight: 0.14
-    palm_body_position_score_weight: 0.20
-    palm_body_dark_score_weight: 0.18
-
-    # 这是这次最关键的参数：
-    # 在 slot 4 ROI 内，只检查掌面应该出现的局部核心区域。
-    # 当前 slot 4 ROI 是 x=704,y=396,w=297,h=271。
-    # 这个 rect 大约对应 ROI 内 x=36,y=92,w=208,h=98。
-    palm_body_enable_palm_body_core_check: true
-    palm_body_palm_body_core_rect: [0.12, 0.34, 0.70, 0.36]
-    palm_body_palm_body_core_min_pixels: 220
-    palm_body_palm_body_core_min_density: 0.055
-    palm_body_palm_body_core_min_dark_ratio: 0.60
-
-    ############################################################
-    # palm_stem profile
-    # 掌的连接杆/柄：只能辅助，不能单独确认 palm。
-    ############################################################
-    palm_stem_candidate_mask_mode: "foreground_or_dark"
-    palm_stem_foreground_min_depth_diff: 0.006
-    palm_stem_min_component_area: 80
-    palm_stem_min_candidate_score: 0.28
-    palm_stem_max_component_area_ratio: 0.18
-    palm_stem_require_depth_for_candidate: false
-
-    palm_stem_ideal_aspect_w_over_h: 0.45
-    palm_stem_aspect_tolerance: 0.70
-    palm_stem_ideal_width_ratio: 0.15
-    palm_stem_width_tolerance: 0.20
-    palm_stem_ideal_height_ratio: 0.32
-    palm_stem_height_tolerance: 0.30
-
-    palm_stem_min_width_ratio: 0.04
-    palm_stem_min_height_ratio: 0.10
-    palm_stem_min_fill_ratio: 0.10
-
-    palm_stem_enable_position_score: true
-    palm_stem_ideal_center_x_ratio: 0.45
-    palm_stem_center_x_tolerance: 0.34
-    palm_stem_ideal_center_y_ratio: 0.66
-    palm_stem_center_y_tolerance: 0.30
-
-    palm_stem_enable_roi_edge_suppression: true
-    palm_stem_suppress_left_ratio: 0.04
-    palm_stem_suppress_right_ratio: 0.04
-    palm_stem_suppress_top_ratio: 0.10
-    palm_stem_suppress_bottom_ratio: 0.08
-
-    palm_stem_enable_ignore_mask: false
-    palm_stem_ignore_rects: [ [0.0, 0.0, 0.0, 0.0] ]
-
-    palm_stem_enable_rgb_dark_filter: true
-    palm_stem_rgb_dark_filter_mode: "filter"
-    palm_stem_dark_gray_threshold: 105
-    palm_stem_min_dark_ratio: 0.16
-
-    palm_stem_shape_score_weight: 0.34
-    palm_stem_depth_score_weight: 0.12
-    palm_stem_area_score_weight: 0.12
-    palm_stem_position_score_weight: 0.22
-    palm_stem_dark_score_weight: 0.20
+    palm_reference_slot4_empty_rgb_path: "config/reference/slot4_empty_Color.png"
+    palm_reference_slot4_empty_depth_path: "config/reference/slot4_empty_Depth.png"
+    palm_reference_slot4_dark_gray_threshold: 90
+    palm_reference_slot4_rgb_diff_threshold: 35
+    palm_reference_slot4_depth_delta: 0.04
+    palm_reference_slot4_allow_depth_hole: true
+    palm_reference_slot4_min_area: 120
+    palm_reference_slot4_min_width: 20
+    palm_reference_slot4_min_height: 6
+    palm_reference_slot4_min_aspect_ratio: 0.45
+    palm_reference_slot4_min_fill_ratio: 0.06

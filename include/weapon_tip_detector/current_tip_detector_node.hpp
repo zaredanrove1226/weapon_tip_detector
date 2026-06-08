@@ -5,6 +5,8 @@
 #include "weapon_tip_detector/detection_pipeline.hpp"
 #include "weapon_tip_detector/detector_types.hpp"
 #include "weapon_tip_detector/preview_debugger.hpp"
+#include "weapon_tip_detector/palm_reference_detector.hpp"
+#include "ament_index_cpp/get_package_share_directory.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/u_int8.hpp"
@@ -86,6 +88,16 @@ private:
 
   void logDetectionResult(const DetectionResult & result);
 
+  std::string resolvePackagePath(const std::string & path) const;
+
+  DetectionResult convertPalmReferenceResultToDetectionResult(
+    const PalmReferenceResult & ref,
+    const std::string & tip_type,
+    const TipProfile & main_profile,
+    const cv::Rect & display_roi,
+    const cv::Rect & detect_roi,
+    const cv::Mat & distance_mask) const;
+
 private:
   int current_slot_id_{3};
   std::vector<std::string> slot_tip_types_;
@@ -166,13 +178,17 @@ private:
   TipProfile fist_stem_profile_;
 
   TipProfile palm_profile_;
-  bool enable_palm_dual_profile_{true};
-  TipProfile palm_body_profile_;
-  TipProfile palm_stem_profile_;
 
+  bool palm_reference_enable_{false};
+  PalmReferenceSlotParams palm_reference_slot3_params_;
+  PalmReferenceSlotParams palm_reference_slot4_params_;
+  
   std::unique_ptr<DepthProjector> depth_projector_;
   std::unique_ptr<DetectionPipeline> detection_pipeline_;
   std::unique_ptr<PreviewDebugger> preview_debugger_;
+
+  // 新增 PalmReferenceDetector 成员
+  PalmReferenceDetector palm_reference_detector_;
 };
 
 }  // namespace weapon_tip_detector

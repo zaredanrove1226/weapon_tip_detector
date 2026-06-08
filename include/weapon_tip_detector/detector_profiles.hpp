@@ -20,10 +20,6 @@ TipProfile defaultFistStemProfile();
 
 TipProfile defaultPalmProfile();
 
-TipProfile defaultPalmBodyProfile();
-
-TipProfile defaultPalmStemProfile();
-
 }  // namespace weapon_tip_detector
 
 #endif  // WEAPON_TIP_DETECTOR__DETECTOR_PROFILES_HPP_
