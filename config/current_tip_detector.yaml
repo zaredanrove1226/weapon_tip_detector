@@ -35,9 +35,9 @@ current_tip_detector_node:
 
     # 调参阶段 false，避免历史帧误导。
     # 给组长演示时如果画面稳定，可改 true。
-    stable_enabled: false
-    stable_history_size: 7
-    stable_accept_count: 4
+    stable_enabled: true
+    stable_history_size: 5
+    stable_accept_count: 3
 
     detect_roi_height_ratio: 1.0
 
