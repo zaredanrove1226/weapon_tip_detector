@@ -7,6 +7,8 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 from launch_ros.actions import Node
 
@@ -28,6 +30,16 @@ def generate_launch_description():
         description='Current weapon tip slot id. Valid range: 1~6.'
     )
 
+    realsense_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('realsense2_camera'),
+                'launch',
+                'rs_launch.py'
+            )
+        )
+    )
+
     current_tip_detector_node = Node(
         package='weapon_tip_detector',
         executable='current_tip_detector_node_refactored',
@@ -43,5 +55,6 @@ def generate_launch_description():
 
     return LaunchDescription([
         declare_current_slot_id,
+        realsense_launch,
         current_tip_detector_node,
     ])

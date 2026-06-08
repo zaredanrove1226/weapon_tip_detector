@@ -22,7 +22,7 @@ current_tip_detector_node:
     # 近距离 demo。机械最终安装未定，后续只需要改这里。
     target_distance: 0.50
     distance_tolerance: 0.12
-    valid_depth_min: 0.15
+    valid_depth_min: 0.30
     valid_depth_max: 0.70
 
     background_percentile: 0.75
@@ -49,13 +49,13 @@ current_tip_detector_node:
     # ROI 仍然按 slot 配置；实际比赛时 current_slot_id 变化后自动选对应 ROI 和 profile。
     slot_roi_ratios: [
       # slot 1: spear / 矛尖
-      0.68, 0.16, 0.14, 0.50,
+      0.609, 0.082, 0.180, 0.700,
 
       # slot 2: fist / 拳
-      0.64, 0.30, 0.24, 0.37,
+      0.570, 0.444, 0.223, 0.481,
 
       # slot 3: palm / 掌
-      0.66, 0.37, 0.17, 0.30,
+      0.542, 0.611, 0.208, 0.288,
 
       # slot 4: palm / 掌
       0.580, 0.572, 0.180, 0.301,
@@ -92,7 +92,7 @@ current_tip_detector_node:
     ############################################################
     spear_head_candidate_mask_mode: "foreground_or_dark"
     spear_head_foreground_min_depth_diff: 0.008
-    spear_head_min_component_area: 25
+    spear_head_min_component_area: 3000
     spear_head_min_candidate_score: 0.30
     spear_head_max_component_area_ratio: 0.48
     spear_head_require_depth_for_candidate: false
@@ -118,8 +118,8 @@ current_tip_detector_node:
 
     spear_head_enable_ignore_mask: true
     spear_head_ignore_rects: [
-      0.00, 0.76, 0.20, 0.24,
-      0.58, 0.00, 0.42, 1.00
+      0.00, 0.00, 0.10, 1.00,
+      0.00, 0.76, 0.20, 0.24
     ]
 
     spear_head_enable_rgb_dark_filter: true
@@ -133,8 +133,8 @@ current_tip_detector_node:
     spear_head_position_score_weight: 0.14
     spear_head_dark_score_weight: 0.20
 
-    spear_head_min_width_ratio: 0.18
-    spear_head_min_height_ratio: 0.25
+    spear_head_min_width_ratio: 0.35
+    spear_head_min_height_ratio: 0.45
     spear_head_min_fill_ratio: 0.18
 
     ############################################################
@@ -208,10 +208,10 @@ current_tip_detector_node:
     # 新版 cpp 使用 fist_body_ 前缀；不要再用旧的 fist_ 前缀。
     ############################################################
     fist_body_candidate_mask_mode: "foreground_or_dark"
-    fist_body_min_component_area: 600
+    fist_body_min_component_area: 9000
     fist_body_min_candidate_score: 0.28
     fist_body_max_component_area_ratio: 0.40
-    fist_body_require_depth_for_candidate: false
+    fist_body_require_depth_for_candidate: true
 
     fist_body_enable_depth_behind_veto: true
     fist_body_depth_behind_veto_min_count: 120
@@ -257,7 +257,7 @@ current_tip_detector_node:
     fist_body_dark_score_weight: 0.24
 
     fist_body_min_width_ratio: 0.08
-    fist_body_min_height_ratio: 0.10
+    fist_body_min_height_ratio: 0.35
     fist_body_min_fill_ratio: 0.12
 
     ############################################################
@@ -268,10 +268,10 @@ current_tip_detector_node:
     ############################################################
     fist_stem_candidate_mask_mode: "foreground_and_dark"
     fist_stem_foreground_min_depth_diff: 0.006
-    fist_stem_min_component_area: 8
-    fist_stem_min_candidate_score: 0.34
+    fist_stem_min_component_area: 300
+    fist_stem_min_candidate_score: 0.42
     fist_stem_max_component_area_ratio: 0.13
-    fist_stem_require_depth_for_candidate: false
+    fist_stem_require_depth_for_candidate: true
 
     fist_stem_ideal_aspect_w_over_h: 0.35
     fist_stem_aspect_tolerance: 0.65
@@ -314,17 +314,17 @@ current_tip_detector_node:
 
     palm_reference_enable: true
 
-    palm_reference_slot3_empty_rgb_path: "config/reference/slot3_empty_rgb.png"
-    palm_reference_slot3_empty_depth_path: "config/reference/slot3_empty_depth.png"
+    palm_reference_slot3_empty_rgb_path: "config/reference/slot3_empty_Color.png"
+    palm_reference_slot3_empty_depth_path: "config/reference/slot3_empty_Depth.png"
     palm_reference_slot3_dark_gray_threshold: 90
     palm_reference_slot3_rgb_diff_threshold: 35
     palm_reference_slot3_depth_delta: 0.04
     palm_reference_slot3_allow_depth_hole: true
-    palm_reference_slot3_min_area: 300
-    palm_reference_slot3_min_width: 40
-    palm_reference_slot3_min_height: 10
-    palm_reference_slot3_min_aspect_ratio: 1.5
-    palm_reference_slot3_min_fill_ratio: 0.18
+    palm_reference_slot3_min_area: 3000
+    palm_reference_slot3_min_width: 54
+    palm_reference_slot3_min_height: 35
+    palm_reference_slot3_min_aspect_ratio: 0.35
+    palm_reference_slot3_min_fill_ratio: 0.05
 
     palm_reference_slot4_empty_rgb_path: "config/reference/slot4_empty_Color.png"
     palm_reference_slot4_empty_depth_path: "config/reference/slot4_empty_Depth.png"
@@ -332,8 +332,8 @@ current_tip_detector_node:
     palm_reference_slot4_rgb_diff_threshold: 35
     palm_reference_slot4_depth_delta: 0.04
     palm_reference_slot4_allow_depth_hole: true
-    palm_reference_slot4_min_area: 120
-    palm_reference_slot4_min_width: 20
-    palm_reference_slot4_min_height: 6
+    palm_reference_slot4_min_area: 3000
+    palm_reference_slot4_min_width: 80
+    palm_reference_slot4_min_height: 40
     palm_reference_slot4_min_aspect_ratio: 0.45
-    palm_reference_slot4_min_fill_ratio: 0.06
+    palm_reference_slot4_min_fill_ratio: 0.08
