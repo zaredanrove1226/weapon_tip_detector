@@ -23,6 +23,8 @@ struct SupportRuleConfig
 struct DetectionPipelineConfig
 {
   double target_distance{0.30};
+  double distance_tolerance{0.18};
+
   double valid_depth_min{0.12};
   double valid_depth_max{0.70};
 

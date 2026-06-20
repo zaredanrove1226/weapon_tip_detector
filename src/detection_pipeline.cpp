@@ -3,6 +3,7 @@
 #include "weapon_tip_detector/detector_utils.hpp"
 
 #include <opencv2/imgproc.hpp>
+#include "rclcpp/rclcpp.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -100,14 +101,12 @@ DetectionResult DetectionPipeline::process(
       stem_support_dark_ratio);
 
     const bool body_ok = body_eval.best.exists && body_eval.best.accepted;
-    bool stem_ok = stem_eval.best.exists && stem_eval.best.accepted;
 
     // fist_body 可以单独确认 fist；
-    // fist_stem 不能单独确认 fist，必须有上方/附近拳体暗色支撑。
-    if (stem_ok && !stem_has_body_support) {
-      stem_ok = false;
+    // fist_stem 只作为辅助信息，不再允许单独确认 fist。
+    if (stem_eval.best.exists && stem_eval.best.accepted) {
       stem_eval.best.accepted = false;
-      stem_eval.best.rejected_reason = "stem_no_body";
+      stem_eval.best.rejected_reason = stem_has_body_support ? "stem_aux_only" : "stem_no_body";
       stem_eval.accepted_candidate_count = 0;
     }
 
@@ -128,23 +127,20 @@ DetectionResult DetectionPipeline::process(
       result.active_profile = profiles.fist_body;
       result.active_profile_name = "fist_body";
       main_eval_raw_present = true;
-    } else if (stem_ok) {
-      main_eval.best = stem_eval.best;
-      main_eval.profile = stem_eval.profile;
-      result.active_profile = profiles.fist_stem;
-      result.active_profile_name = "fist_stem";
-      main_eval_raw_present = true;
     } else {
-      main_eval.best = chooseBestCandidate(body_eval.best, stem_eval.best);
-
-      if (main_eval.best.source_profile == "fist_stem") {
-        main_eval.profile = stem_eval.profile;
-        result.active_profile = profiles.fist_stem;
-        result.active_profile_name = stem_has_body_support ? "fist_stem" : "fist_stem_no_body";
-      } else {
+      // fist 现在只允许 fist_body 确认目标。
+      // 如果 body 没通过，优先显示 body 的失败原因；
+      // stem 只作为辅助信息，不再抢主日志和主预览框。
+      if (body_eval.best.exists) {
+        main_eval.best = body_eval.best;
         main_eval.profile = body_eval.profile;
         result.active_profile = profiles.fist_body;
         result.active_profile_name = "fist_body";
+      } else {
+        main_eval.best = stem_eval.best;
+        main_eval.profile = stem_eval.profile;
+        result.active_profile = profiles.fist_stem;
+        result.active_profile_name = "fist_stem_aux";
       }
 
       main_eval_raw_present = false;
@@ -180,6 +176,28 @@ DetectionResult DetectionPipeline::process(
       stem_support_dark_ratio);
 
     const bool body_ok = body_eval.best.exists && body_eval.best.accepted;
+    RCLCPP_INFO(
+      rclcpp::get_logger("detection_pipeline"),
+      "[fist_debug] body exists=%s accepted=%s reason=%s score=%.3f area=%d bbox=(%d,%d,%d,%d) "
+      "stem exists=%s accepted=%s reason=%s score=%.3f area=%d bbox=(%d,%d,%d,%d)",
+      body_eval.best.exists ? "true" : "false",
+      body_eval.best.accepted ? "true" : "false",
+      body_eval.best.rejected_reason.c_str(),
+      body_eval.best.final_score,
+      body_eval.best.area,
+      body_eval.best.bbox.x,
+      body_eval.best.bbox.y,
+      body_eval.best.bbox.width,
+      body_eval.best.bbox.height,
+      stem_eval.best.exists ? "true" : "false",
+      stem_eval.best.accepted ? "true" : "false",
+      stem_eval.best.rejected_reason.c_str(),
+      stem_eval.best.final_score,
+      stem_eval.best.area,
+      stem_eval.best.bbox.x,
+      stem_eval.best.bbox.y,
+      stem_eval.best.bbox.width,
+      stem_eval.best.bbox.height);
     bool stem_ok = stem_eval.best.exists && stem_eval.best.accepted;
 
     // spear_body 可以单独确认 spear；
@@ -273,17 +291,21 @@ double DetectionPipeline::estimateSlotBaseDepth(
   const cv::Rect & roi,
   int & valid_count) const
 {
-  std::vector<float> depths;
-  depths.reserve(static_cast<size_t>(std::max(0, roi.area())));
-
   valid_count = 0;
 
   if (color_depth.empty() || roi.width <= 0 || roi.height <= 0) {
     return config_.target_distance;
   }
 
-  for (int y = roi.y; y < roi.y + roi.height; ++y) {
-    for (int x = roi.x; x < roi.x + roi.width; ++x) {
+  const cv::Rect image_rect(0, 0, color_depth.cols, color_depth.rows);
+  const cv::Rect safe_roi = roi & image_rect;
+
+  if (safe_roi.width <= 0 || safe_roi.height <= 0) {
+    return config_.target_distance;
+  }
+
+  for (int y = safe_roi.y; y < safe_roi.y + safe_roi.height; ++y) {
+    for (int x = safe_roi.x; x < safe_roi.x + safe_roi.width; ++x) {
       const float z = color_depth.at<float>(y, x);
 
       if (!std::isfinite(z)) {
@@ -294,23 +316,11 @@ double DetectionPipeline::estimateSlotBaseDepth(
         continue;
       }
 
-      depths.push_back(z);
+      ++valid_count;
     }
   }
 
-  valid_count = static_cast<int>(depths.size());
-
-  if (valid_count < config_.min_slot_base_valid_pixels) {
-    return config_.target_distance;
-  }
-
-  const double slot_base = percentile(depths, config_.slot_base_percentile);
-
-  if (!std::isfinite(slot_base)) {
-    return config_.target_distance;
-  }
-
-  return slot_base;
+  return config_.target_distance;
 }
 
 cv::Mat DetectionPipeline::buildDepthCandidateMask(
@@ -319,14 +329,25 @@ cv::Mat DetectionPipeline::buildDepthCandidateMask(
   const double slot_base_depth,
   const TipProfile & profile) const
 {
-  cv::Mat fg_mask = cv::Mat::zeros(color_depth.size(), CV_8UC1);
+  (void)profile;
+
+  cv::Mat depth_candidate_mask = cv::Mat::zeros(color_depth.size(), CV_8UC1);
 
   if (color_depth.empty() || detect_roi.width <= 0 || detect_roi.height <= 0) {
-    return fg_mask;
+    return depth_candidate_mask;
   }
 
-  for (int y = detect_roi.y; y < detect_roi.y + detect_roi.height; ++y) {
-    for (int x = detect_roi.x; x < detect_roi.x + detect_roi.width; ++x) {
+  const cv::Rect image_rect(0, 0, color_depth.cols, color_depth.rows);
+  const cv::Rect safe_roi = detect_roi & image_rect;
+
+  if (safe_roi.width <= 0 || safe_roi.height <= 0) {
+    return depth_candidate_mask;
+  }
+
+  const double tolerance = std::max(1e-6, config_.distance_tolerance);
+
+  for (int y = safe_roi.y; y < safe_roi.y + safe_roi.height; ++y) {
+    for (int x = safe_roi.x; x < safe_roi.x + safe_roi.width; ++x) {
       const float z_f = color_depth.at<float>(y, x);
 
       if (!std::isfinite(z_f)) {
@@ -339,39 +360,37 @@ cv::Mat DetectionPipeline::buildDepthCandidateMask(
         continue;
       }
 
-      const double delta = slot_base_depth - z;
+      const double depth_error = std::abs(z - slot_base_depth);
 
-      if (delta >= profile.min_depth_delta &&
-          delta <= config_.max_depth_delta)
-      {
-        fg_mask.at<uint8_t>(y, x) = 255;
+      if (depth_error <= tolerance) {
+        depth_candidate_mask.at<uchar>(y, x) = 255;
       }
     }
   }
 
-  if (cv::countNonZero(fg_mask) == 0) {
-    return fg_mask;
+  if (cv::countNonZero(depth_candidate_mask) == 0) {
+    return depth_candidate_mask;
   }
 
   if (config_.mask_dilate_size > 1) {
     const int k = config_.mask_dilate_size;
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(k, k));
-    cv::dilate(fg_mask, fg_mask, kernel);
+    cv::dilate(depth_candidate_mask, depth_candidate_mask, kernel);
   }
 
   if (config_.morph_close_size > 1) {
     const int k = config_.morph_close_size;
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(k, k));
-    cv::morphologyEx(fg_mask, fg_mask, cv::MORPH_CLOSE, kernel);
+    cv::morphologyEx(depth_candidate_mask, depth_candidate_mask, cv::MORPH_CLOSE, kernel);
   }
 
   if (config_.morph_open_size > 1) {
     const int k = config_.morph_open_size;
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(k, k));
-    cv::morphologyEx(fg_mask, fg_mask, cv::MORPH_OPEN, kernel);
+    cv::morphologyEx(depth_candidate_mask, depth_candidate_mask, cv::MORPH_OPEN, kernel);
   }
 
-  return fg_mask;
+  return depth_candidate_mask;
 }
 
 cv::Mat DetectionPipeline::buildDarkMask(
@@ -621,10 +640,12 @@ Candidate DetectionPipeline::scoreCandidate(
     static_cast<double>(area) /
     static_cast<double>(std::max(1, profile.min_component_area * 5)));
 
+  const double depth_tolerance = std::max(1e-6, config_.distance_tolerance);
+  const double mean_depth_error =
+    c.depth_count > 0 ? std::abs(c.mean_depth - slot_base_depth) : depth_tolerance + 1.0;
+
   if (c.depth_count > 0) {
-    c.depth_score = clamp01(
-      (c.mean_depth_delta - profile.min_depth_delta) /
-      std::max(0.005, profile.min_depth_delta * 5.0));
+    c.depth_score = clamp01(1.0 - mean_depth_error / depth_tolerance);
   } else {
     c.depth_score = 0.0;
   }
@@ -706,18 +727,16 @@ Candidate DetectionPipeline::scoreCandidate(
     return c;
   }
 
-  if (profile.require_depth_for_candidate &&
-      c.mean_depth_delta < profile.min_depth_delta)
-  {
-    c.rejected_reason = "delta_small";
+  if (profile.require_depth_for_candidate && mean_depth_error > depth_tolerance) {
+    c.rejected_reason = "depth_error_large";
     return c;
   }
 
   if (profile.enable_depth_too_far_veto &&
       c.depth_count >= profile.depth_too_far_veto_min_count &&
-      c.mean_depth_delta < profile.depth_too_far_veto_max_delta)
+      mean_depth_error > depth_tolerance)
   {
-    c.rejected_reason = "depth_too_far";
+    c.rejected_reason = "depth_error_large";
     return c;
   }
 

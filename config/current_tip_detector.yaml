@@ -52,7 +52,7 @@ current_tip_detector_node:
       0.609, 0.082, 0.180, 0.700,
 
       # slot 2: fist / 拳
-      0.570, 0.444, 0.223, 0.481,
+      0.640, 0.487, 0.214, 0.389,
 
       # slot 3: palm / 掌
       0.542, 0.611, 0.208, 0.288,
@@ -208,7 +208,7 @@ current_tip_detector_node:
     # 新版 cpp 使用 fist_body_ 前缀；不要再用旧的 fist_ 前缀。
     ############################################################
     fist_body_candidate_mask_mode: "depth_candidate_or_dark"
-    fist_body_min_component_area: 9000
+    fist_body_min_component_area: 3000
     fist_body_min_candidate_score: 0.28
     fist_body_max_component_area_ratio: 0.40
     fist_body_require_depth_for_candidate: true
@@ -270,7 +270,7 @@ current_tip_detector_node:
     fist_stem_min_depth_delta: 0.006
     fist_stem_min_component_area: 300
     fist_stem_min_candidate_score: 0.42
-    fist_stem_max_component_area_ratio: 0.13
+    fist_stem_max_component_area_ratio: 0.08
     fist_stem_require_depth_for_candidate: true
 
     fist_stem_ideal_aspect_w_over_h: 0.35

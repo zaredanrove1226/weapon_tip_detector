@@ -587,6 +587,8 @@ DetectionPipelineConfig CurrentTipDetectorNode::makeDetectionPipelineConfig() co
 {
   DetectionPipelineConfig config;
   config.target_distance = target_distance_;
+  config.distance_tolerance = distance_tolerance_;
+
   config.valid_depth_min = valid_depth_min_;
   config.valid_depth_max = valid_depth_max_;
 
