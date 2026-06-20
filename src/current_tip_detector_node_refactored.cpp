@@ -209,18 +209,18 @@ void CurrentTipDetectorNode::setupProfiles()
   spear_enable_dual_profile_ = this->declare_parameter<bool>(
     "spear_enable_dual_profile", true);
 
-  spear_stem_require_head_support_ = this->declare_parameter<bool>(
-    "spear_stem_require_head_support", true);
-  spear_stem_head_support_above_ratio_ = this->declare_parameter<double>(
-    "spear_stem_head_support_above_ratio", 0.60);
-  spear_stem_head_support_expand_x_ratio_ = this->declare_parameter<double>(
-    "spear_stem_head_support_expand_x_ratio", 0.28);
-  spear_stem_head_support_min_dark_pixels_ = this->declare_parameter<int>(
-    "spear_stem_head_support_min_dark_pixels", 140);
-  spear_stem_head_support_min_dark_ratio_ = this->declare_parameter<double>(
-    "spear_stem_head_support_min_dark_ratio", 0.06);
+  spear_stem_require_body_support_ = this->declare_parameter<bool>(
+    "spear_stem_require_body_support", true);
+  spear_stem_body_support_above_ratio_ = this->declare_parameter<double>(
+    "spear_stem_body_support_above_ratio", 0.60);
+  spear_stem_body_support_expand_x_ratio_ = this->declare_parameter<double>(
+    "spear_stem_body_support_expand_x_ratio", 0.28);
+  spear_stem_body_support_min_dark_pixels_ = this->declare_parameter<int>(
+    "spear_stem_body_support_min_dark_pixels", 140);
+  spear_stem_body_support_min_dark_ratio_ = this->declare_parameter<double>(
+    "spear_stem_body_support_min_dark_ratio", 0.06);
 
-  spear_head_profile_ = declareProfile("spear_head", defaultSpearHeadProfile());
+  spear_body_profile_ = declareProfile("spear_body", defaultSpearBodyProfile());
   spear_stem_profile_ = declareProfile("spear_stem", defaultSpearStemProfile());
 
   fist_profile_ = declareProfile("fist", defaultFistProfile());
@@ -501,7 +501,7 @@ ProfileBundle CurrentTipDetectorNode::makeProfileBundle() const
 {
   ProfileBundle bundle;
   bundle.spear = spear_profile_;
-  bundle.spear_head = spear_head_profile_;
+  bundle.spear_body = spear_body_profile_;
   bundle.spear_stem = spear_stem_profile_;
 
   bundle.fist = fist_profile_;
@@ -611,11 +611,11 @@ DetectionPipelineConfig CurrentTipDetectorNode::makeDetectionPipelineConfig() co
   config.fist_stem_body_support.min_dark_pixels = fist_stem_body_support_min_dark_pixels_;
   config.fist_stem_body_support.min_dark_ratio = fist_stem_body_support_min_dark_ratio_;
 
-  config.spear_stem_head_support.require_support = spear_stem_require_head_support_;
-  config.spear_stem_head_support.above_ratio = spear_stem_head_support_above_ratio_;
-  config.spear_stem_head_support.expand_x_ratio = spear_stem_head_support_expand_x_ratio_;
-  config.spear_stem_head_support.min_dark_pixels = spear_stem_head_support_min_dark_pixels_;
-  config.spear_stem_head_support.min_dark_ratio = spear_stem_head_support_min_dark_ratio_;
+  config.spear_stem_body_support.require_support = spear_stem_require_body_support_;
+  config.spear_stem_body_support.above_ratio = spear_stem_body_support_above_ratio_;
+  config.spear_stem_body_support.expand_x_ratio = spear_stem_body_support_expand_x_ratio_;
+  config.spear_stem_body_support.min_dark_pixels = spear_stem_body_support_min_dark_pixels_;
+  config.spear_stem_body_support.min_dark_ratio = spear_stem_body_support_min_dark_ratio_;
 
   return config;
 }

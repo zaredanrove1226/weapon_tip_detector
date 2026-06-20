@@ -275,13 +275,13 @@ detect_roi == display_roi
 `spear` 使用普通 RGB-D 检测，并采用双 profile：
 
 ```text
-spear_head：偏向检测矛尖主体
+spear_body：偏向检测矛尖主体
 spear_stem：偏向检测连接杆 / 底座区域
 ```
 
 其中：
 
-* `spear_head` 可以单独确认 spear；
+* `spear_body` 可以单独确认 spear；
 * `spear_stem` 不能单独确认 spear，必须有矛尖主体暗色支撑。
 
 当前主要依赖：
@@ -299,10 +299,10 @@ spear_stem：偏向检测连接杆 / 底座区域
 
 ```text
 slot_roi_ratios 第 1 组
-spear_head_min_component_area
-spear_head_min_width_ratio
-spear_head_min_height_ratio
-spear_head_ignore_rects
+spear_body_min_component_area
+spear_body_min_width_ratio
+spear_body_min_height_ratio
+spear_body_ignore_rects
 ```
 
 调试时如果出现：

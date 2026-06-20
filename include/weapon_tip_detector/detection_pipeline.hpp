@@ -42,13 +42,13 @@ struct DetectionPipelineConfig
   bool spear_enable_dual_profile{true};
 
   SupportRuleConfig fist_stem_body_support;
-  SupportRuleConfig spear_stem_head_support;
+  SupportRuleConfig spear_stem_body_support;
 };
 
 struct ProfileBundle
 {
   TipProfile spear;
-  TipProfile spear_head;
+  TipProfile spear_body;
   TipProfile spear_stem;
 
   TipProfile fist;

@@ -30,7 +30,7 @@
 - present: YES
 - raw: YES
 - stable: ON
-- profile: spear_head
+- profile: spear_body
 - candidate mask mode: foreground_or_dark
 - best: accepted
 - score: 约 0.77 / 0.300

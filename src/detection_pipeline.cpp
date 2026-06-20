@@ -150,9 +150,9 @@ DetectionResult DetectionPipeline::process(
       main_eval_raw_present = false;
     }
   } else if (tip_type == "spear" && config_.spear_enable_dual_profile) {
-    ProfileEvaluation head_eval = evaluateProfile(
-      "spear_head",
-      profiles.spear_head,
+    ProfileEvaluation body_eval = evaluateProfile(
+      "spear_body",
+      profiles.spear_body,
       bgr_image,
       color_depth,
       distance_mask,
@@ -171,42 +171,42 @@ DetectionResult DetectionPipeline::process(
     int stem_support_dark_pixels = 0;
     double stem_support_dark_ratio = 0.0;
 
-    const bool stem_has_head_support = hasSupportByRule(
+    const bool stem_has_body_support = hasSupportByRule(
       stem_eval.best,
-      head_eval.dark_mask,
+      body_eval.dark_mask,
       detect_roi,
-      config_.spear_stem_head_support,
+      config_.spear_stem_body_support,
       stem_support_dark_pixels,
       stem_support_dark_ratio);
 
-    const bool head_ok = head_eval.best.exists && head_eval.best.accepted;
+    const bool body_ok = body_eval.best.exists && body_eval.best.accepted;
     bool stem_ok = stem_eval.best.exists && stem_eval.best.accepted;
 
-    // spear_head 可以单独确认 spear；
+    // spear_body 可以单独确认 spear；
     // spear_stem 不能单独确认 spear，必须有上方/附近矛尖主体暗色支撑。
-    if (stem_ok && !stem_has_head_support) {
+    if (stem_ok && !stem_has_body_support) {
       stem_ok = false;
       stem_eval.best.accepted = false;
-      stem_eval.best.rejected_reason = "stem_no_head";
+      stem_eval.best.rejected_reason = "stem_no_body";
       stem_eval.accepted_candidate_count = 0;
     }
 
     main_eval.name = "spear_dual";
-    main_eval.foreground_mask = orMaskSafe(head_eval.foreground_mask, stem_eval.foreground_mask);
-    main_eval.dark_mask = orMaskSafe(head_eval.dark_mask, stem_eval.dark_mask);
-    main_eval.candidate_mask = orMaskSafe(head_eval.candidate_mask, stem_eval.candidate_mask);
+    main_eval.foreground_mask = orMaskSafe(body_eval.foreground_mask, stem_eval.foreground_mask);
+    main_eval.dark_mask = orMaskSafe(body_eval.dark_mask, stem_eval.dark_mask);
+    main_eval.candidate_mask = orMaskSafe(body_eval.candidate_mask, stem_eval.candidate_mask);
     main_eval.foreground_pixels = cv::countNonZero(main_eval.foreground_mask(detect_roi));
     main_eval.dark_pixels = cv::countNonZero(main_eval.dark_mask(detect_roi));
     main_eval.candidate_pixels = cv::countNonZero(main_eval.candidate_mask(detect_roi));
-    main_eval.raw_component_count = head_eval.raw_component_count + stem_eval.raw_component_count;
+    main_eval.raw_component_count = body_eval.raw_component_count + stem_eval.raw_component_count;
     main_eval.accepted_candidate_count =
-      head_eval.accepted_candidate_count + stem_eval.accepted_candidate_count;
+      body_eval.accepted_candidate_count + stem_eval.accepted_candidate_count;
 
-    if (head_ok) {
-      main_eval.best = head_eval.best;
-      main_eval.profile = head_eval.profile;
-      result.active_profile = profiles.spear_head;
-      result.active_profile_name = "spear_head";
+    if (body_ok) {
+      main_eval.best = body_eval.best;
+      main_eval.profile = body_eval.profile;
+      result.active_profile = profiles.spear_body;
+      result.active_profile_name = "spear_body";
       main_eval_raw_present = true;
     } else if (stem_ok) {
       main_eval.best = stem_eval.best;
@@ -215,16 +215,16 @@ DetectionResult DetectionPipeline::process(
       result.active_profile_name = "spear_stem";
       main_eval_raw_present = true;
     } else {
-      main_eval.best = chooseBestCandidate(head_eval.best, stem_eval.best);
+      main_eval.best = chooseBestCandidate(body_eval.best, stem_eval.best);
 
       if (main_eval.best.source_profile == "spear_stem") {
         main_eval.profile = stem_eval.profile;
         result.active_profile = profiles.spear_stem;
-        result.active_profile_name = stem_has_head_support ? "spear_stem" : "spear_stem_no_head";
+        result.active_profile_name = stem_has_body_support ? "spear_stem" : "spear_stem_no_body";
       } else {
-        main_eval.profile = head_eval.profile;
-        result.active_profile = profiles.spear_head;
-        result.active_profile_name = "spear_head";
+        main_eval.profile = body_eval.profile;
+        result.active_profile = profiles.spear_body;
+        result.active_profile_name = "spear_body";
       }
 
       main_eval_raw_present = false;

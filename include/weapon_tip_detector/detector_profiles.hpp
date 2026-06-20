@@ -8,7 +8,7 @@ namespace weapon_tip_detector
 
 TipProfile defaultSpearProfile();
 
-TipProfile defaultSpearHeadProfile();
+TipProfile defaultSpearBodyProfile();
 
 TipProfile defaultSpearStemProfile();
 

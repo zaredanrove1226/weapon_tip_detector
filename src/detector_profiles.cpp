@@ -38,10 +38,10 @@ TipProfile defaultSpearProfile()
   return p;
 }
 
-TipProfile defaultSpearHeadProfile()
+TipProfile defaultSpearBodyProfile()
 {
   TipProfile p = defaultSpearProfile();
-  p.type = "spear_head";
+  p.type = "spear_body";
   p.candidate_mask_mode = "foreground_or_dark";
   p.foreground_min_depth_diff = 0.008;
   p.min_component_area = 25;

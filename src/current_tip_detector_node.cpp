@@ -314,18 +314,18 @@ public:
     // spear_stem 不能单独确认 spear。
     // 它只作为“连接杆/底座”辅助证据：
     // 如果只有一根细杆，没有上方矛尖主体暗色支撑，则拒绝 stem。
-    spear_stem_require_head_support_ = this->declare_parameter<bool>(
-      "spear_stem_require_head_support", true);
-    spear_stem_head_support_above_ratio_ = this->declare_parameter<double>(
-      "spear_stem_head_support_above_ratio", 0.60);
-    spear_stem_head_support_expand_x_ratio_ = this->declare_parameter<double>(
-      "spear_stem_head_support_expand_x_ratio", 0.28);
-    spear_stem_head_support_min_dark_pixels_ = this->declare_parameter<int>(
-      "spear_stem_head_support_min_dark_pixels", 140);
-    spear_stem_head_support_min_dark_ratio_ = this->declare_parameter<double>(
-      "spear_stem_head_support_min_dark_ratio", 0.06);
+    spear_stem_require_body_support_ = this->declare_parameter<bool>(
+      "spear_stem_require_body_support", true);
+    spear_stem_body_support_above_ratio_ = this->declare_parameter<double>(
+      "spear_stem_body_support_above_ratio", 0.60);
+    spear_stem_body_support_expand_x_ratio_ = this->declare_parameter<double>(
+      "spear_stem_body_support_expand_x_ratio", 0.28);
+    spear_stem_body_support_min_dark_pixels_ = this->declare_parameter<int>(
+      "spear_stem_body_support_min_dark_pixels", 140);
+    spear_stem_body_support_min_dark_ratio_ = this->declare_parameter<double>(
+      "spear_stem_body_support_min_dark_ratio", 0.06);
 
-    spear_head_profile_ = declareProfile("spear_head", defaultSpearHeadProfile());
+    spear_body_profile_ = declareProfile("spear_body", defaultSpearBodyProfile());
     spear_stem_profile_ = declareProfile("spear_stem", defaultSpearStemProfile());
 
     fist_profile_ = declareProfile("fist", defaultFistProfile());
@@ -476,10 +476,10 @@ private:
     return p;
   }
 
-  TipProfile defaultSpearHeadProfile() const
+  TipProfile defaultSpearBodyProfile() const
   {
     TipProfile p = defaultSpearProfile();
-    p.type = "spear_head";
+    p.type = "spear_body";
     p.candidate_mask_mode = "foreground_or_dark";
     p.foreground_min_depth_diff = 0.008;
     p.min_component_area = 25;
@@ -1910,8 +1910,8 @@ private:
         main_eval_raw_present = false;
       }
     } else if (tip_type == "spear" && spear_enable_dual_profile_) {
-      ProfileEvaluation head_eval = evaluateProfile(
-        "spear_head", spear_head_profile_, preview_bgr, color_depth, distance_mask,
+      ProfileEvaluation body_eval = evaluateProfile(
+        "spear_body", spear_body_profile_, preview_bgr, color_depth, distance_mask,
         detect_roi, background_depth);
       ProfileEvaluation stem_eval = evaluateProfile(
         "spear_stem", spear_stem_profile_, preview_bgr, color_depth, distance_mask,
@@ -1919,48 +1919,48 @@ private:
 
       int stem_support_dark_pixels = 0;
       double stem_support_dark_ratio = 0.0;
-      bool stem_has_head_support = true;
-      if (spear_stem_require_head_support_) {
-        stem_has_head_support = hasUpperDarkSupport(
+      bool stem_has_body_support = true;
+      if (spear_stem_require_body_support_) {
+        stem_has_body_support = hasUpperDarkSupport(
           stem_eval.best,
-          head_eval.dark_mask,
+          body_eval.dark_mask,
           detect_roi,
-          spear_stem_head_support_above_ratio_,
-          spear_stem_head_support_expand_x_ratio_,
-          spear_stem_head_support_min_dark_pixels_,
-          spear_stem_head_support_min_dark_ratio_,
+          spear_stem_body_support_above_ratio_,
+          spear_stem_body_support_expand_x_ratio_,
+          spear_stem_body_support_min_dark_pixels_,
+          spear_stem_body_support_min_dark_ratio_,
           stem_support_dark_pixels,
           stem_support_dark_ratio);
       }
 
-      const bool head_ok = head_eval.best.exists && head_eval.best.accepted;
+      const bool body_ok = body_eval.best.exists && body_eval.best.accepted;
       bool stem_ok = stem_eval.best.exists && stem_eval.best.accepted;
 
-      // 关键规则：spear_head 可以单独确认 spear；
+      // 关键规则：spear_body 可以单独确认 spear；
       // spear_stem 不能单独确认 spear，必须在上方/附近有矛尖主体暗色支撑。
-      if (stem_ok && !stem_has_head_support) {
+      if (stem_ok && !stem_has_body_support) {
         stem_ok = false;
         stem_eval.best.accepted = false;
-        stem_eval.best.rejected_reason = "stem_no_head";
+        stem_eval.best.rejected_reason = "stem_no_body";
         stem_eval.accepted_candidate_count = 0;
       }
 
       main_eval.name = "spear_dual";
-      main_eval.foreground_mask = orMaskSafe(head_eval.foreground_mask, stem_eval.foreground_mask);
-      main_eval.dark_mask = orMaskSafe(head_eval.dark_mask, stem_eval.dark_mask);
-      main_eval.candidate_mask = orMaskSafe(head_eval.candidate_mask, stem_eval.candidate_mask);
+      main_eval.foreground_mask = orMaskSafe(body_eval.foreground_mask, stem_eval.foreground_mask);
+      main_eval.dark_mask = orMaskSafe(body_eval.dark_mask, stem_eval.dark_mask);
+      main_eval.candidate_mask = orMaskSafe(body_eval.candidate_mask, stem_eval.candidate_mask);
       main_eval.foreground_pixels = cv::countNonZero(main_eval.foreground_mask(detect_roi));
       main_eval.dark_pixels = cv::countNonZero(main_eval.dark_mask(detect_roi));
       main_eval.candidate_pixels = cv::countNonZero(main_eval.candidate_mask(detect_roi));
-      main_eval.raw_component_count = head_eval.raw_component_count + stem_eval.raw_component_count;
-      main_eval.accepted_candidate_count = head_eval.accepted_candidate_count + stem_eval.accepted_candidate_count;
+      main_eval.raw_component_count = body_eval.raw_component_count + stem_eval.raw_component_count;
+      main_eval.accepted_candidate_count = body_eval.accepted_candidate_count + stem_eval.accepted_candidate_count;
 
-      if (head_ok) {
-        // 只要 spear_head 通过，raw_present 必须是 true。
-        main_eval.best = head_eval.best;
-        main_eval.profile = head_eval.profile;
-        profile = spear_head_profile_;
-        active_profile_name = "spear_head";
+      if (body_ok) {
+        // 只要 spear_body 通过，raw_present 必须是 true。
+        main_eval.best = body_eval.best;
+        main_eval.profile = body_eval.profile;
+        profile = spear_body_profile_;
+        active_profile_name = "spear_body";
         main_eval_raw_present = true;
       } else if (stem_ok) {
         main_eval.best = stem_eval.best;
@@ -1970,15 +1970,15 @@ private:
         main_eval_raw_present = true;
       } else {
         // 没有 accepted 时，仍显示最值得看的候选，方便继续判断是分数/形状/深度的问题。
-        main_eval.best = chooseBestCandidate(head_eval.best, stem_eval.best);
+        main_eval.best = chooseBestCandidate(body_eval.best, stem_eval.best);
         if (main_eval.best.source_profile == "spear_stem") {
           main_eval.profile = stem_eval.profile;
           profile = spear_stem_profile_;
-          active_profile_name = stem_has_head_support ? "spear_stem" : "spear_stem_no_head";
+          active_profile_name = stem_has_body_support ? "spear_stem" : "spear_stem_no_body";
         } else {
-          main_eval.profile = head_eval.profile;
-          profile = spear_head_profile_;
-          active_profile_name = "spear_head";
+          main_eval.profile = body_eval.profile;
+          profile = spear_body_profile_;
+          active_profile_name = "spear_body";
         }
         main_eval_raw_present = false;
       }
@@ -2275,12 +2275,12 @@ private:
 
   TipProfile spear_profile_;
   bool spear_enable_dual_profile_{true};
-  bool spear_stem_require_head_support_{true};
-  double spear_stem_head_support_above_ratio_{0.60};
-  double spear_stem_head_support_expand_x_ratio_{0.28};
-  int spear_stem_head_support_min_dark_pixels_{140};
-  double spear_stem_head_support_min_dark_ratio_{0.06};
-  TipProfile spear_head_profile_;
+  bool spear_stem_require_body_support_{true};
+  double spear_stem_body_support_above_ratio_{0.60};
+  double spear_stem_body_support_expand_x_ratio_{0.28};
+  int spear_stem_body_support_min_dark_pixels_{140};
+  double spear_stem_body_support_min_dark_ratio_{0.06};
+  TipProfile spear_body_profile_;
   TipProfile spear_stem_profile_;
 
   TipProfile fist_profile_;

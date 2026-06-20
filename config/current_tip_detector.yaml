@@ -71,7 +71,7 @@ current_tip_detector_node:
     # spear profile
     # 矛尖的特征会在“矛尖主体”和“下方连接杆/底座”之间切换。
     # 所以这里不再强行用一套参数兼容所有角度，而是拆成：
-    # spear_head：偏向检测矛尖主体；
+    # spear_body：偏向检测矛尖主体；
     # spear_stem：偏向检测连接杆和底座区域。
     # 但注意：spear_stem 不能单独确认 spear，必须有矛尖主体暗色支撑。
     ############################################################
@@ -79,69 +79,69 @@ current_tip_detector_node:
 
     # spear_stem 不能单独确认 spear。
     # 只有连接杆不算 spear；stem 上方/附近必须有矛尖主体暗色支撑。
-    spear_stem_require_head_support: true
-    spear_stem_head_support_above_ratio: 0.60
-    spear_stem_head_support_expand_x_ratio: 0.28
-    spear_stem_head_support_min_dark_pixels: 140
-    spear_stem_head_support_min_dark_ratio: 0.06
+    spear_stem_require_body_support: true
+    spear_stem_body_support_above_ratio: 0.60
+    spear_stem_body_support_expand_x_ratio: 0.28
+    spear_stem_body_support_min_dark_pixels: 140
+    spear_stem_body_support_min_dark_ratio: 0.06
 
     ############################################################
-    # spear_head profile
+    # spear_body profile
     # 偏向矛尖主体：高、窄、暗色面积明显，形状接近竖向菱形。
-    # 新版 cpp 使用 spear_head_ 前缀；不要再用旧的 spear_ 前缀控制双 profile。
+    # 新版 cpp 使用 spear_body_ 前缀；不要再用旧的 spear_ 前缀控制双 profile。
     ############################################################
-    spear_head_candidate_mask_mode: "foreground_or_dark"
-    spear_head_foreground_min_depth_diff: 0.008
-    spear_head_min_component_area: 3000
-    spear_head_min_candidate_score: 0.30
-    spear_head_max_component_area_ratio: 0.48
-    spear_head_require_depth_for_candidate: false
+    spear_body_candidate_mask_mode: "foreground_or_dark"
+    spear_body_foreground_min_depth_diff: 0.008
+    spear_body_min_component_area: 3000
+    spear_body_min_candidate_score: 0.30
+    spear_body_max_component_area_ratio: 0.48
+    spear_body_require_depth_for_candidate: false
 
-    spear_head_ideal_aspect_w_over_h: 0.45
-    spear_head_aspect_tolerance: 0.90
-    spear_head_ideal_width_ratio: 0.42
-    spear_head_width_tolerance: 0.65
-    spear_head_ideal_height_ratio: 0.55
-    spear_head_height_tolerance: 0.70
+    spear_body_ideal_aspect_w_over_h: 0.45
+    spear_body_aspect_tolerance: 0.90
+    spear_body_ideal_width_ratio: 0.42
+    spear_body_width_tolerance: 0.65
+    spear_body_ideal_height_ratio: 0.55
+    spear_body_height_tolerance: 0.70
 
-    spear_head_enable_position_score: true
-    spear_head_ideal_center_x_ratio: 0.58
-    spear_head_center_x_tolerance: 0.36
-    spear_head_ideal_center_y_ratio: 0.45
-    spear_head_center_y_tolerance: 0.58
+    spear_body_enable_position_score: true
+    spear_body_ideal_center_x_ratio: 0.58
+    spear_body_center_x_tolerance: 0.36
+    spear_body_ideal_center_y_ratio: 0.45
+    spear_body_center_y_tolerance: 0.58
 
-    spear_head_enable_roi_edge_suppression: true
-    spear_head_suppress_left_ratio: 0.18
-    spear_head_suppress_right_ratio: 0.10
-    spear_head_suppress_top_ratio: 0.00
-    spear_head_suppress_bottom_ratio: 0.24
+    spear_body_enable_roi_edge_suppression: true
+    spear_body_suppress_left_ratio: 0.18
+    spear_body_suppress_right_ratio: 0.10
+    spear_body_suppress_top_ratio: 0.00
+    spear_body_suppress_bottom_ratio: 0.24
 
-    spear_head_enable_ignore_mask: true
-    spear_head_ignore_rects: [
+    spear_body_enable_ignore_mask: true
+    spear_body_ignore_rects: [
       0.00, 0.00, 0.10, 1.00,
       0.00, 0.76, 0.20, 0.24
     ]
 
-    spear_head_enable_rgb_dark_filter: true
-    spear_head_rgb_dark_filter_mode: "score"
-    spear_head_dark_gray_threshold: 105
-    spear_head_min_dark_ratio: 0.10
+    spear_body_enable_rgb_dark_filter: true
+    spear_body_rgb_dark_filter_mode: "score"
+    spear_body_dark_gray_threshold: 105
+    spear_body_min_dark_ratio: 0.10
 
-    spear_head_shape_score_weight: 0.34
-    spear_head_depth_score_weight: 0.18
-    spear_head_area_score_weight: 0.14
-    spear_head_position_score_weight: 0.14
-    spear_head_dark_score_weight: 0.20
+    spear_body_shape_score_weight: 0.34
+    spear_body_depth_score_weight: 0.18
+    spear_body_area_score_weight: 0.14
+    spear_body_position_score_weight: 0.14
+    spear_body_dark_score_weight: 0.20
 
-    spear_head_min_width_ratio: 0.35
-    spear_head_min_height_ratio: 0.45
-    spear_head_min_fill_ratio: 0.18
+    spear_body_min_width_ratio: 0.35
+    spear_body_min_height_ratio: 0.45
+    spear_body_min_fill_ratio: 0.18
 
     ############################################################
     # spear_stem profile
     # 偏向连接杆/底座区域：面积小、偏竖直、深度结构更明显。
     # 这套用于补 spear 在矛尖主体和连接杆交界处容易断检的问题。
-    # 但它不能单独确认 spear，必须通过上面的 head_support 检查。
+    # 但它不能单独确认 spear，必须通过上面的 body_support 检查。
     ############################################################
     spear_stem_candidate_mask_mode: "foreground_and_dark"
     spear_stem_foreground_min_depth_diff: 0.010

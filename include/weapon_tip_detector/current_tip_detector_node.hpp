@@ -159,12 +159,12 @@ private:
 
   TipProfile spear_profile_;
   bool spear_enable_dual_profile_{true};
-  bool spear_stem_require_head_support_{true};
-  double spear_stem_head_support_above_ratio_{0.60};
-  double spear_stem_head_support_expand_x_ratio_{0.28};
-  int spear_stem_head_support_min_dark_pixels_{140};
-  double spear_stem_head_support_min_dark_ratio_{0.06};
-  TipProfile spear_head_profile_;
+  bool spear_stem_require_body_support_{true};
+  double spear_stem_body_support_above_ratio_{0.60};
+  double spear_stem_body_support_expand_x_ratio_{0.28};
+  int spear_stem_body_support_min_dark_pixels_{140};
+  double spear_stem_body_support_min_dark_ratio_{0.06};
+  TipProfile spear_body_profile_;
   TipProfile spear_stem_profile_;
 
   TipProfile fist_profile_;
