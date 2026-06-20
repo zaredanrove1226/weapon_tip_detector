@@ -223,6 +223,20 @@ void CurrentTipDetectorNode::setupProfiles()
   spear_body_profile_ = declareProfile("spear_body", defaultSpearBodyProfile());
   spear_stem_profile_ = declareProfile("spear_stem", defaultSpearStemProfile());
 
+  spear_body_slot_max_component_area_ratios_ =
+    this->declare_parameter<std::vector<double>>(
+      "spear_body_slot_max_component_area_ratios",
+      std::vector<double>{0.48, 0.0, 0.0, 0.0, 0.0, 0.42});
+
+  if (spear_body_slot_max_component_area_ratios_.size() != 6) {
+    RCLCPP_WARN(
+      this->get_logger(),
+      "spear_body_slot_max_component_area_ratios size is %zu, expected 6. Disable slot-specific spear body area override.",
+      spear_body_slot_max_component_area_ratios_.size());
+    spear_body_slot_max_component_area_ratios_ =
+      std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+  }
+
   fist_profile_ = declareProfile("fist", defaultFistProfile());
   enable_fist_dual_profile_ = this->declare_parameter<bool>(
     "enable_fist_dual_profile", true);
@@ -364,6 +378,8 @@ TipProfile CurrentTipDetectorNode::declareProfile(
     prefix + "_min_candidate_score", p.min_candidate_score);
   p.max_component_area_ratio = this->declare_parameter<double>(
     prefix + "_max_component_area_ratio", p.max_component_area_ratio);
+  p.enable_area_large_veto = this->declare_parameter<bool>(
+    prefix + "_enable_area_large_veto", p.enable_area_large_veto);
   p.require_depth_for_candidate = this->declare_parameter<bool>(
     prefix + "_require_depth_for_candidate", p.require_depth_for_candidate);
 
@@ -502,6 +518,19 @@ ProfileBundle CurrentTipDetectorNode::makeProfileBundle() const
   ProfileBundle bundle;
   bundle.spear = spear_profile_;
   bundle.spear_body = spear_body_profile_;
+
+  if (isValidSlotId(current_slot_id_) &&
+      spear_body_slot_max_component_area_ratios_.size() == 6)
+  {
+    const double slot_area_ratio =
+      spear_body_slot_max_component_area_ratios_.at(
+        static_cast<size_t>(current_slot_id_ - 1));
+
+    if (slot_area_ratio > 0.0) {
+      bundle.spear_body.max_component_area_ratio = slot_area_ratio;
+    }
+  }
+
   bundle.spear_stem = spear_stem_profile_;
 
   bundle.fist = fist_profile_;

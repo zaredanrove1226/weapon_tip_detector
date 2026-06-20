@@ -157,6 +157,8 @@ private:
 
   std::vector<double> slot_roi_ratios_;
 
+  std::vector<double> spear_body_slot_max_component_area_ratios_;
+
   TipProfile spear_profile_;
   bool spear_enable_dual_profile_{true};
   bool spear_stem_require_body_support_{true};

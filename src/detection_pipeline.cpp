@@ -176,28 +176,28 @@ DetectionResult DetectionPipeline::process(
       stem_support_dark_ratio);
 
     const bool body_ok = body_eval.best.exists && body_eval.best.accepted;
-    RCLCPP_INFO(
-      rclcpp::get_logger("detection_pipeline"),
-      "[fist_debug] body exists=%s accepted=%s reason=%s score=%.3f area=%d bbox=(%d,%d,%d,%d) "
-      "stem exists=%s accepted=%s reason=%s score=%.3f area=%d bbox=(%d,%d,%d,%d)",
-      body_eval.best.exists ? "true" : "false",
-      body_eval.best.accepted ? "true" : "false",
-      body_eval.best.rejected_reason.c_str(),
-      body_eval.best.final_score,
-      body_eval.best.area,
-      body_eval.best.bbox.x,
-      body_eval.best.bbox.y,
-      body_eval.best.bbox.width,
-      body_eval.best.bbox.height,
-      stem_eval.best.exists ? "true" : "false",
-      stem_eval.best.accepted ? "true" : "false",
-      stem_eval.best.rejected_reason.c_str(),
-      stem_eval.best.final_score,
-      stem_eval.best.area,
-      stem_eval.best.bbox.x,
-      stem_eval.best.bbox.y,
-      stem_eval.best.bbox.width,
-      stem_eval.best.bbox.height);
+    // RCLCPP_INFO(
+    //   rclcpp::get_logger("detection_pipeline"),
+    //   "[fist_debug] body exists=%s accepted=%s reason=%s score=%.3f area=%d bbox=(%d,%d,%d,%d) "
+    //   "stem exists=%s accepted=%s reason=%s score=%.3f area=%d bbox=(%d,%d,%d,%d)",
+    //   body_eval.best.exists ? "true" : "false",
+    //   body_eval.best.accepted ? "true" : "false",
+    //   body_eval.best.rejected_reason.c_str(),
+    //   body_eval.best.final_score,
+    //   body_eval.best.area,
+    //   body_eval.best.bbox.x,
+    //   body_eval.best.bbox.y,
+    //   body_eval.best.bbox.width,
+    //   body_eval.best.bbox.height,
+    //   stem_eval.best.exists ? "true" : "false",
+    //   stem_eval.best.accepted ? "true" : "false",
+    //   stem_eval.best.rejected_reason.c_str(),
+    //   stem_eval.best.final_score,
+    //   stem_eval.best.area,
+    //   stem_eval.best.bbox.x,
+    //   stem_eval.best.bbox.y,
+    //   stem_eval.best.bbox.width,
+    //   stem_eval.best.bbox.height);
     bool stem_ok = stem_eval.best.exists && stem_eval.best.accepted;
 
     // spear_body 可以单独确认 spear；
@@ -717,7 +717,9 @@ Candidate DetectionPipeline::scoreCandidate(
     return c;
   }
 
-  if (c.area_ratio > profile.max_component_area_ratio) {
+  if (profile.enable_area_large_veto &&
+      c.area_ratio > profile.max_component_area_ratio)
+  {
     c.rejected_reason = "area_large";
     return c;
   }

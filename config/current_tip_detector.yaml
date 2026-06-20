@@ -49,7 +49,7 @@ current_tip_detector_node:
     # ROI 仍然按 slot 配置；实际比赛时 current_slot_id 变化后自动选对应 ROI 和 profile。
     slot_roi_ratios: [
       # slot 1: spear / 矛尖
-      0.609, 0.082, 0.180, 0.700,
+      0.695, 0.130, 0.180, 0.700,
 
       # slot 2: fist / 拳
       0.640, 0.487, 0.214, 0.389,
@@ -64,7 +64,7 @@ current_tip_detector_node:
       0.610, 0.500, 0.205, 0.370,
 
       # slot 6: spear / 矛尖
-      0.661, 0.126, 0.193, 0.678
+      0.630, 0.126, 0.193, 0.678
     ]
 
     ############################################################
@@ -90,12 +90,20 @@ current_tip_detector_node:
     # 偏向矛尖主体：高、窄、暗色面积明显，形状接近竖向菱形。
     # 新版 cpp 使用 spear_body_ 前缀；不要再用旧的 spear_ 前缀控制双 profile。
     ############################################################
-    spear_body_candidate_mask_mode: "depth_candidate_or_dark"
+    spear_body_candidate_mask_mode: "depth_candidate_and_dark"
     spear_body_min_depth_delta: 0.008
     spear_body_min_component_area: 3000
     spear_body_min_candidate_score: 0.30
     spear_body_max_component_area_ratio: 0.48
-    spear_body_require_depth_for_candidate: false
+    spear_body_slot_max_component_area_ratios:
+      - 0.48
+      - 0.00
+      - 0.00
+      - 0.00
+      - 0.00
+      - 0.42
+    spear_body_require_depth_for_candidate: true
+    spear_body_enable_area_large_veto: true
 
     spear_body_ideal_aspect_w_over_h: 0.45
     spear_body_aspect_tolerance: 0.90
@@ -111,10 +119,10 @@ current_tip_detector_node:
     spear_body_center_y_tolerance: 0.58
 
     spear_body_enable_roi_edge_suppression: true
-    spear_body_suppress_left_ratio: 0.18
-    spear_body_suppress_right_ratio: 0.10
-    spear_body_suppress_top_ratio: 0.00
-    spear_body_suppress_bottom_ratio: 0.24
+    spear_body_suppress_left_ratio: 0.00
+    spear_body_suppress_right_ratio: 0.00
+    spear_body_suppress_top_ratio: 0.35
+    spear_body_suppress_bottom_ratio: 0.00
 
     spear_body_enable_ignore_mask: true
     spear_body_ignore_rects: [
@@ -134,7 +142,7 @@ current_tip_detector_node:
     spear_body_dark_score_weight: 0.20
 
     spear_body_min_width_ratio: 0.35
-    spear_body_min_height_ratio: 0.45
+    spear_body_min_height_ratio: 0.75
     spear_body_min_fill_ratio: 0.18
 
     ############################################################

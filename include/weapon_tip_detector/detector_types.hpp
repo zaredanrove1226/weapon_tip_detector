@@ -21,6 +21,7 @@ struct TipProfile
   int min_component_area{20};
   double min_candidate_score{0.30};
   double max_component_area_ratio{0.60};
+  bool enable_area_large_veto{true};
   bool require_depth_for_candidate{true};
 
   // Optional veto: depth is not required, but if enough valid depth points
