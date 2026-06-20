@@ -81,9 +81,9 @@ void CurrentTipDetectorNode::declareAndLoadParameters()
   valid_depth_min_ = this->declare_parameter<double>("valid_depth_min", 0.12);
   valid_depth_max_ = this->declare_parameter<double>("valid_depth_max", 0.70);
 
-  background_percentile_ = this->declare_parameter<double>("background_percentile", 0.75);
-  min_background_valid_pixels_ = this->declare_parameter<int>("min_background_valid_pixels", 50);
-  foreground_max_depth_diff_ = this->declare_parameter<double>("foreground_max_depth_diff", 0.18);
+  slot_base_percentile_ = this->declare_parameter<double>("slot_base_percentile", 0.75);
+  min_slot_base_valid_pixels_ = this->declare_parameter<int>("min_slot_base_valid_pixels", 50);
+  max_depth_delta_ = this->declare_parameter<double>("max_depth_delta", 0.18);
 
   morph_open_size_ = this->declare_parameter<int>("morph_open_size", 0);
   morph_close_size_ = this->declare_parameter<int>("morph_close_size", 5);
@@ -356,8 +356,8 @@ TipProfile CurrentTipDetectorNode::declareProfile(
 
   p.candidate_mask_mode = this->declare_parameter<std::string>(
     prefix + "_candidate_mask_mode", p.candidate_mask_mode);
-  p.foreground_min_depth_diff = this->declare_parameter<double>(
-    prefix + "_foreground_min_depth_diff", p.foreground_min_depth_diff);
+  p.min_depth_delta = this->declare_parameter<double>(
+    prefix + "_min_depth_delta", p.min_depth_delta);
   p.min_component_area = this->declare_parameter<int>(
     prefix + "_min_component_area", p.min_component_area);
   p.min_candidate_score = this->declare_parameter<double>(
@@ -367,12 +367,12 @@ TipProfile CurrentTipDetectorNode::declareProfile(
   p.require_depth_for_candidate = this->declare_parameter<bool>(
     prefix + "_require_depth_for_candidate", p.require_depth_for_candidate);
 
-  p.enable_depth_behind_veto = this->declare_parameter<bool>(
-    prefix + "_enable_depth_behind_veto", p.enable_depth_behind_veto);
-  p.depth_behind_veto_min_count = this->declare_parameter<int>(
-    prefix + "_depth_behind_veto_min_count", p.depth_behind_veto_min_count);
-  p.depth_behind_veto_max_diff = this->declare_parameter<double>(
-    prefix + "_depth_behind_veto_max_diff", p.depth_behind_veto_max_diff);
+  p.enable_depth_too_far_veto = this->declare_parameter<bool>(
+    prefix + "_enable_depth_too_far_veto", p.enable_depth_too_far_veto);
+  p.depth_too_far_veto_min_count = this->declare_parameter<int>(
+    prefix + "_depth_too_far_veto_min_count", p.depth_too_far_veto_min_count);
+  p.depth_too_far_veto_max_delta = this->declare_parameter<double>(
+    prefix + "_depth_too_far_veto_max_delta", p.depth_too_far_veto_max_delta);
 
   p.ideal_aspect_w_over_h = this->declare_parameter<double>(
     prefix + "_ideal_aspect_w_over_h", p.ideal_aspect_w_over_h);
@@ -590,9 +590,9 @@ DetectionPipelineConfig CurrentTipDetectorNode::makeDetectionPipelineConfig() co
   config.valid_depth_min = valid_depth_min_;
   config.valid_depth_max = valid_depth_max_;
 
-  config.background_percentile = background_percentile_;
-  config.min_background_valid_pixels = min_background_valid_pixels_;
-  config.foreground_max_depth_diff = foreground_max_depth_diff_;
+  config.slot_base_percentile = slot_base_percentile_;
+  config.min_slot_base_valid_pixels = min_slot_base_valid_pixels_;
+  config.max_depth_delta = max_depth_delta_;
 
   config.morph_open_size = morph_open_size_;
   config.morph_close_size = morph_close_size_;
@@ -869,8 +869,8 @@ DetectionResult CurrentTipDetectorNode::convertPalmReferenceResultToDetectionRes
   result.raw_present = ref.raw_present;
   result.stable_present = ref.raw_present;
 
-  result.background_depth = 0.0;
-  result.background_valid_count = 0;
+  result.slot_base_depth = 0.0;
+  result.slot_base_valid_count = 0;
 
   result.distance_pixels = 0;
   if (!distance_mask.empty()) {
@@ -885,7 +885,7 @@ DetectionResult CurrentTipDetectorNode::convertPalmReferenceResultToDetectionRes
   ev.name = "palm_reference_diff";
   ev.profile = ref_profile;
 
-  ev.foreground_mask = ref.depth_diff_mask;
+  ev.depth_candidate_mask = ref.depth_diff_mask;
   ev.dark_mask = ref.rgb_diff_mask;
   ev.candidate_mask = ref.candidate_mask;
 
@@ -904,7 +904,7 @@ DetectionResult CurrentTipDetectorNode::convertPalmReferenceResultToDetectionRes
     return cv::countNonZero(mask(safe_roi));
   };
 
-  ev.foreground_pixels = countInRoi(ref.depth_diff_mask);
+  ev.depth_candidate_pixels = countInRoi(ref.depth_diff_mask);
   ev.dark_pixels = countInRoi(ref.rgb_diff_mask);
   ev.candidate_pixels = countInRoi(ref.candidate_mask);
   ev.raw_component_count = ref.raw_component_count;
@@ -992,7 +992,7 @@ void CurrentTipDetectorNode::logDetectionResult(
     this->get_logger(),
     *this->get_clock(),
     2000,
-    "slot=%d expected=%s profile=%s present=%s raw=%s stable=%s mode=%s cand_mode=%s dist=%d fg=%d dark=%d cand=%d bg=%.3f bg_valid=%d comp=%d pass=%d best=%s accepted=%s reason=%s score=%.3f diff=%.3f area=%d bbox=(%d,%d,%d,%d) pos=(%.2f,%.2f) dark_ratio=%.2f depth_count=%d",
+    "slot=%d expected=%s profile=%s present=%s raw=%s stable=%s mode=%s cand_mode=%s dist=%d depth_cand=%d dark=%d cand=%d base=%.3f base_valid=%d comp=%d pass=%d best=%s accepted=%s reason=%s score=%.3f delta=%.3f area=%d bbox=(%d,%d,%d,%d) pos=(%.2f,%.2f) dark_ratio=%.2f depth_count=%d",
     current_slot_id_,
     result.tip_type.c_str(),
     result.active_profile_name.c_str(),
@@ -1002,18 +1002,18 @@ void CurrentTipDetectorNode::logDetectionResult(
     display_mask_mode_.c_str(),
     result.active_profile.candidate_mask_mode.c_str(),
     result.distance_pixels,
-    ev.foreground_pixels,
+    ev.depth_candidate_pixels,
     ev.dark_pixels,
     ev.candidate_pixels,
-    result.background_depth,
-    result.background_valid_count,
+    result.slot_base_depth,
+    result.slot_base_valid_count,
     ev.raw_component_count,
     ev.accepted_candidate_count,
     best.exists ? "true" : "false",
     best.accepted ? "true" : "false",
     best.rejected_reason.c_str(),
     best.final_score,
-    best.mean_depth_diff,
+    best.mean_depth_delta,
     best.area,
     best.bbox.x,
     best.bbox.y,

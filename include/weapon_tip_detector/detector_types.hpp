@@ -14,10 +14,10 @@ struct TipProfile
   std::string type{"unknown"};
 
   // Which mask is used to generate connected-component candidates:
-  // foreground, dark, foreground_or_dark, foreground_and_dark, distance, distance_or_dark.
+  // depth_candidate, dark, depth_candidate_or_dark, depth_candidate_and_dark, distance, distance_or_dark.
   std::string candidate_mask_mode{"foreground"};
 
-  double foreground_min_depth_diff{0.02};
+  double min_depth_delta{0.02};
   int min_component_area{20};
   double min_candidate_score{0.30};
   double max_component_area_ratio{0.60};
@@ -25,9 +25,9 @@ struct TipProfile
 
   // Optional veto: depth is not required, but if enough valid depth points
   // prove the candidate is behind the estimated background, reject it.
-  bool enable_depth_behind_veto{false};
-  int depth_behind_veto_min_count{120};
-  double depth_behind_veto_max_diff{-0.003};
+  bool enable_depth_too_far_veto{false};
+  int depth_too_far_veto_min_count{120};
+  double depth_too_far_veto_max_delta{-0.003};
 
   double ideal_aspect_w_over_h{1.0};
   double aspect_tolerance{1.0};
@@ -82,7 +82,7 @@ struct Candidate
   int mask_count{0};
 
   double mean_depth{0.0};
-  double mean_depth_diff{0.0};
+  double mean_depth_delta{0.0};
 
   double area_ratio{0.0};
   double width_ratio{0.0};
@@ -109,11 +109,11 @@ struct ProfileEvaluation
   std::string name{"main"};
   TipProfile profile;
 
-  cv::Mat foreground_mask;
+  cv::Mat depth_candidate_mask;
   cv::Mat dark_mask;
   cv::Mat candidate_mask;
 
-  int foreground_pixels{0};
+  int depth_candidate_pixels{0};
   int dark_pixels{0};
   int candidate_pixels{0};
   int raw_component_count{0};

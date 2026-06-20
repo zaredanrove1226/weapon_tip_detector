@@ -26,9 +26,9 @@ struct DetectionPipelineConfig
   double valid_depth_min{0.12};
   double valid_depth_max{0.70};
 
-  double background_percentile{0.75};
-  int min_background_valid_pixels{50};
-  double foreground_max_depth_diff{0.18};
+  double slot_base_percentile{0.75};
+  int min_slot_base_valid_pixels{50};
+  double max_depth_delta{0.18};
 
   int morph_open_size{0};
   int morph_close_size{5};
@@ -70,8 +70,8 @@ struct DetectionResult
   cv::Rect display_roi;
   cv::Rect detect_roi;
 
-  double background_depth{0.0};
-  int background_valid_count{0};
+  double slot_base_depth{0.0};
+  int slot_base_valid_count{0};
 
   int distance_pixels{0};
   cv::Mat distance_mask;
@@ -104,15 +104,15 @@ public:
     const ProfileBundle & profiles);
 
 private:
-  double estimateBackgroundDepth(
+  double estimateSlotBaseDepth(
     const cv::Mat & color_depth,
     const cv::Rect & roi,
     int & valid_count) const;
 
-  cv::Mat buildForegroundMask(
+  cv::Mat buildDepthCandidateMask(
     const cv::Mat & color_depth,
     const cv::Rect & detect_roi,
-    double background_depth,
+    double slot_base_depth,
     const TipProfile & profile) const;
 
   cv::Mat buildDarkMask(
@@ -122,7 +122,7 @@ private:
 
   cv::Mat buildCandidateMask(
     const cv::Mat & distance_mask,
-    const cv::Mat & foreground_mask,
+    const cv::Mat & depth_candidate_mask,
     const cv::Mat & dark_mask,
     const cv::Rect & detect_roi,
     const TipProfile & profile) const;
@@ -144,7 +144,7 @@ private:
     const cv::Mat & color_depth_roi,
     const cv::Mat & dark_mask_roi,
     const cv::Rect & local_detect_roi,
-    double background_depth,
+    double slot_base_depth,
     const TipProfile & profile) const;
 
   Candidate findBestCandidate(
@@ -152,7 +152,7 @@ private:
     const cv::Mat & color_depth,
     const cv::Mat & dark_mask,
     const cv::Rect & detect_roi,
-    double background_depth,
+    double slot_base_depth,
     const TipProfile & profile,
     int & raw_component_count,
     int & accepted_candidate_count) const;
@@ -164,7 +164,7 @@ private:
     const cv::Mat & color_depth,
     const cv::Mat & distance_mask,
     const cv::Rect & detect_roi,
-    double background_depth) const;
+    double slot_base_depth) const;
 
   static Candidate chooseBestCandidate(
     const Candidate & a,

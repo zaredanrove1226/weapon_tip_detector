@@ -7,8 +7,8 @@ TipProfile defaultSpearProfile()
 {
   TipProfile p;
   p.type = "spear";
-  p.candidate_mask_mode = "foreground_or_dark";
-  p.foreground_min_depth_diff = 0.008;
+  p.candidate_mask_mode = "depth_candidate_or_dark";
+  p.min_depth_delta = 0.008;
   p.min_component_area = 14;
   p.min_candidate_score = 0.22;
   p.max_component_area_ratio = 0.40;
@@ -42,8 +42,8 @@ TipProfile defaultSpearBodyProfile()
 {
   TipProfile p = defaultSpearProfile();
   p.type = "spear_body";
-  p.candidate_mask_mode = "foreground_or_dark";
-  p.foreground_min_depth_diff = 0.008;
+  p.candidate_mask_mode = "depth_candidate_or_dark";
+  p.min_depth_delta = 0.008;
   p.min_component_area = 25;
   p.min_candidate_score = 0.30;
   p.max_component_area_ratio = 0.35;
@@ -93,8 +93,8 @@ TipProfile defaultSpearStemProfile()
 {
   TipProfile p = defaultSpearProfile();
   p.type = "spear_stem";
-  p.candidate_mask_mode = "foreground_and_dark";
-  p.foreground_min_depth_diff = 0.010;
+  p.candidate_mask_mode = "depth_candidate_and_dark";
+  p.min_depth_delta = 0.010;
   p.min_component_area = 10;
   p.min_candidate_score = 0.34;
   p.max_component_area_ratio = 0.13;
@@ -141,15 +141,15 @@ TipProfile defaultFistProfile()
 {
   TipProfile p;
   p.type = "fist";
-  p.candidate_mask_mode = "foreground_or_dark";
-  p.foreground_min_depth_diff = 0.010;
+  p.candidate_mask_mode = "depth_candidate_or_dark";
+  p.min_depth_delta = 0.010;
   p.min_component_area = 18;
   p.min_candidate_score = 0.25;
   p.max_component_area_ratio = 0.40;
   p.require_depth_for_candidate = false;
-  p.enable_depth_behind_veto = true;
-  p.depth_behind_veto_min_count = 120;
-  p.depth_behind_veto_max_diff = -0.003;
+  p.enable_depth_too_far_veto = true;
+  p.depth_too_far_veto_min_count = 120;
+  p.depth_too_far_veto_max_delta = -0.003;
   p.ideal_aspect_w_over_h = 0.85;
   p.aspect_tolerance = 1.10;
   p.ideal_width_ratio = 0.45;
@@ -179,8 +179,8 @@ TipProfile defaultFistBodyProfile()
 {
   TipProfile p = defaultFistProfile();
   p.type = "fist_body";
-  p.candidate_mask_mode = "foreground_or_dark";
-  p.foreground_min_depth_diff = 0.010;
+  p.candidate_mask_mode = "depth_candidate_or_dark";
+  p.min_depth_delta = 0.010;
   p.min_component_area = 22;
   p.min_candidate_score = 0.28;
   p.max_component_area_ratio = 0.34;
@@ -220,8 +220,8 @@ TipProfile defaultFistStemProfile()
 {
   TipProfile p = defaultFistProfile();
   p.type = "fist_stem";
-  p.candidate_mask_mode = "foreground_or_dark";
-  p.foreground_min_depth_diff = 0.008;
+  p.candidate_mask_mode = "depth_candidate_or_dark";
+  p.min_depth_delta = 0.008;
   p.min_component_area = 8;
   p.min_candidate_score = 0.30;
   p.max_component_area_ratio = 0.16;
@@ -262,8 +262,8 @@ TipProfile defaultPalmProfile()
 {
   TipProfile p;
   p.type = "palm";
-  p.candidate_mask_mode = "foreground_and_dark";
-  p.foreground_min_depth_diff = 0.015;
+  p.candidate_mask_mode = "depth_candidate_and_dark";
+  p.min_depth_delta = 0.015;
   p.min_component_area = 45;
   p.min_candidate_score = 0.38;
   p.max_component_area_ratio = 0.30;

@@ -134,9 +134,9 @@ private:
   double valid_depth_min_{0.12};
   double valid_depth_max_{0.70};
 
-  double background_percentile_{0.75};
-  int min_background_valid_pixels_{50};
-  double foreground_max_depth_diff_{0.18};
+  double slot_base_percentile_{0.75};
+  int min_slot_base_valid_pixels_{50};
+  double max_depth_delta_{0.18};
 
   int morph_open_size_{0};
   int morph_close_size_{5};

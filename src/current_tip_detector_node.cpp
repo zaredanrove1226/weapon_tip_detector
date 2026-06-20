@@ -123,10 +123,10 @@ struct TipProfile
   std::string type{"unknown"};
 
   // Which mask is used to generate connected-component candidates:
-  // foreground, dark, foreground_or_dark, foreground_and_dark, distance, distance_or_dark.
+  // depth_candidate, dark, depth_candidate_or_dark, depth_candidate_and_dark, distance, distance_or_dark.
   std::string candidate_mask_mode{"foreground"};
 
-  double foreground_min_depth_diff{0.02};
+  double min_depth_delta{0.02};
   int min_component_area{20};
   double min_candidate_score{0.30};
   double max_component_area_ratio{0.60};
@@ -182,7 +182,7 @@ struct Candidate
   int mask_count{0};
 
   double mean_depth{0.0};
-  double mean_depth_diff{0.0};
+  double mean_depth_delta{0.0};
 
   double area_ratio{0.0};
   double width_ratio{0.0};
@@ -209,11 +209,11 @@ struct ProfileEvaluation
   std::string name{"main"};
   TipProfile profile;
 
-  cv::Mat foreground_mask;
+  cv::Mat depth_candidate_mask;
   cv::Mat dark_mask;
   cv::Mat candidate_mask;
 
-  int foreground_pixels{0};
+  int depth_candidate_pixels{0};
   int dark_pixels{0};
   int candidate_pixels{0};
   int raw_component_count{0};
@@ -275,9 +275,9 @@ public:
     valid_depth_min_ = this->declare_parameter<double>("valid_depth_min", 0.12);
     valid_depth_max_ = this->declare_parameter<double>("valid_depth_max", 0.70);
 
-    background_percentile_ = this->declare_parameter<double>("background_percentile", 0.75);
-    min_background_valid_pixels_ = this->declare_parameter<int>("min_background_valid_pixels", 50);
-    foreground_max_depth_diff_ = this->declare_parameter<double>("foreground_max_depth_diff", 0.18);
+    slot_base_percentile_ = this->declare_parameter<double>("slot_base_percentile", 0.75);
+    min_slot_base_valid_pixels_ = this->declare_parameter<int>("min_slot_base_valid_pixels", 50);
+    max_depth_delta_ = this->declare_parameter<double>("max_depth_delta", 0.18);
 
     morph_open_size_ = this->declare_parameter<int>("morph_open_size", 0);
     morph_close_size_ = this->declare_parameter<int>("morph_close_size", 5);
@@ -445,8 +445,8 @@ private:
   {
     TipProfile p;
     p.type = "spear";
-    p.candidate_mask_mode = "foreground_or_dark";
-    p.foreground_min_depth_diff = 0.008;
+    p.candidate_mask_mode = "depth_candidate_or_dark";
+    p.min_depth_delta = 0.008;
     p.min_component_area = 14;
     p.min_candidate_score = 0.22;
     p.max_component_area_ratio = 0.40;
@@ -480,8 +480,8 @@ private:
   {
     TipProfile p = defaultSpearProfile();
     p.type = "spear_body";
-    p.candidate_mask_mode = "foreground_or_dark";
-    p.foreground_min_depth_diff = 0.008;
+    p.candidate_mask_mode = "depth_candidate_or_dark";
+    p.min_depth_delta = 0.008;
     p.min_component_area = 25;
     p.min_candidate_score = 0.30;
     p.max_component_area_ratio = 0.35;
@@ -528,8 +528,8 @@ private:
   {
     TipProfile p = defaultSpearProfile();
     p.type = "spear_stem";
-    p.candidate_mask_mode = "foreground_and_dark";
-    p.foreground_min_depth_diff = 0.010;
+    p.candidate_mask_mode = "depth_candidate_and_dark";
+    p.min_depth_delta = 0.010;
     p.min_component_area = 10;
     p.min_candidate_score = 0.34;
     p.max_component_area_ratio = 0.13;
@@ -576,8 +576,8 @@ private:
   {
     TipProfile p;
     p.type = "fist";
-    p.candidate_mask_mode = "foreground_or_dark";
-    p.foreground_min_depth_diff = 0.010;
+    p.candidate_mask_mode = "depth_candidate_or_dark";
+    p.min_depth_delta = 0.010;
     p.min_component_area = 18;
     p.min_candidate_score = 0.25;
     p.max_component_area_ratio = 0.40;
@@ -611,8 +611,8 @@ private:
   {
     TipProfile p = defaultFistProfile();
     p.type = "fist_body";
-    p.candidate_mask_mode = "foreground_or_dark";
-    p.foreground_min_depth_diff = 0.010;
+    p.candidate_mask_mode = "depth_candidate_or_dark";
+    p.min_depth_delta = 0.010;
     p.min_component_area = 22;
     p.min_candidate_score = 0.28;
     p.max_component_area_ratio = 0.34;
@@ -652,8 +652,8 @@ private:
   {
     TipProfile p = defaultFistProfile();
     p.type = "fist_stem";
-    p.candidate_mask_mode = "foreground_or_dark";
-    p.foreground_min_depth_diff = 0.008;
+    p.candidate_mask_mode = "depth_candidate_or_dark";
+    p.min_depth_delta = 0.008;
     p.min_component_area = 8;
     p.min_candidate_score = 0.30;
     p.max_component_area_ratio = 0.16;
@@ -693,8 +693,8 @@ private:
   {
     TipProfile p;
     p.type = "palm";
-    p.candidate_mask_mode = "foreground_and_dark";
-    p.foreground_min_depth_diff = 0.015;
+    p.candidate_mask_mode = "depth_candidate_and_dark";
+    p.min_depth_delta = 0.015;
     p.min_component_area = 45;
     p.min_candidate_score = 0.38;
     p.max_component_area_ratio = 0.30;
@@ -730,8 +730,8 @@ private:
 
     p.candidate_mask_mode = this->declare_parameter<std::string>(
       prefix + "_candidate_mask_mode", p.candidate_mask_mode);
-    p.foreground_min_depth_diff = this->declare_parameter<double>(
-      prefix + "_foreground_min_depth_diff", p.foreground_min_depth_diff);
+    p.min_depth_delta = this->declare_parameter<double>(
+      prefix + "_min_depth_delta", p.min_depth_delta);
     p.min_component_area = this->declare_parameter<int>(
       prefix + "_min_component_area", p.min_component_area);
     p.min_candidate_score = this->declare_parameter<double>(
@@ -1025,7 +1025,7 @@ private:
     }
   }
 
-  double estimateBackgroundDepth(
+  double estimateSlotBaseDepth(
     const cv::Mat & color_depth,
     const cv::Rect & roi,
     int & valid_count) const
@@ -1053,23 +1053,23 @@ private:
 
     valid_count = static_cast<int>(depths.size());
 
-    if (valid_count < min_background_valid_pixels_) {
+    if (valid_count < min_slot_base_valid_pixels_) {
       return target_distance_;
     }
 
-    const double bg = percentile(depths, background_percentile_);
+    const double slot_base = percentile(depths, slot_base_percentile_);
 
-    if (!std::isfinite(bg)) {
+    if (!std::isfinite(slot_base)) {
       return target_distance_;
     }
 
-    return bg;
+    return slot_base;
   }
 
-  cv::Mat buildForegroundMask(
+  cv::Mat buildDepthCandidateMask(
     const cv::Mat & color_depth,
     const cv::Rect & detect_roi,
-    const double background_depth,
+    const double slot_base_depth,
     const TipProfile & profile) const
   {
     cv::Mat fg_mask = cv::Mat::zeros(color_depth.size(), CV_8UC1);
@@ -1088,10 +1088,10 @@ private:
           continue;
         }
 
-        const double diff = background_depth - z;
+        const double delta = slot_base_depth - z;
 
-        if (diff >= profile.foreground_min_depth_diff &&
-            diff <= foreground_max_depth_diff_)
+        if (delta >= profile.min_depth_delta &&
+            delta <= max_depth_delta_)
         {
           fg_mask.at<uint8_t>(y, x) = 255;
         }
@@ -1152,22 +1152,22 @@ private:
 
   cv::Mat buildCandidateMask(
     const cv::Mat & distance_mask,
-    const cv::Mat & foreground_mask,
+    const cv::Mat & depth_candidate_mask,
     const cv::Mat & dark_mask,
     const cv::Rect & detect_roi,
     const TipProfile & profile) const
   {
-    cv::Mat candidate_mask = cv::Mat::zeros(foreground_mask.size(), CV_8UC1);
+    cv::Mat candidate_mask = cv::Mat::zeros(depth_candidate_mask.size(), CV_8UC1);
 
     if (profile.candidate_mask_mode == "dark") {
       dark_mask(detect_roi).copyTo(candidate_mask(detect_roi));
-    } else if (profile.candidate_mask_mode == "foreground_or_dark") {
+    } else if (profile.candidate_mask_mode == "depth_candidate_or_dark") {
       cv::Mat combined;
-      cv::bitwise_or(foreground_mask, dark_mask, combined);
+      cv::bitwise_or(depth_candidate_mask, dark_mask, combined);
       combined(detect_roi).copyTo(candidate_mask(detect_roi));
-    } else if (profile.candidate_mask_mode == "foreground_and_dark") {
+    } else if (profile.candidate_mask_mode == "depth_candidate_and_dark") {
       cv::Mat combined;
-      cv::bitwise_and(foreground_mask, dark_mask, combined);
+      cv::bitwise_and(depth_candidate_mask, dark_mask, combined);
       combined(detect_roi).copyTo(candidate_mask(detect_roi));
     } else if (profile.candidate_mask_mode == "distance") {
       distance_mask(detect_roi).copyTo(candidate_mask(detect_roi));
@@ -1176,7 +1176,7 @@ private:
       cv::bitwise_or(distance_mask, dark_mask, combined);
       combined(detect_roi).copyTo(candidate_mask(detect_roi));
     } else {
-      foreground_mask(detect_roi).copyTo(candidate_mask(detect_roi));
+      depth_candidate_mask(detect_roi).copyTo(candidate_mask(detect_roi));
     }
 
     return candidate_mask;
@@ -1215,7 +1215,7 @@ private:
     const cv::Mat & color_depth_roi,
     const cv::Mat & dark_mask_roi,
     const cv::Rect & local_detect_roi,
-    const double background_depth,
+    const double slot_base_depth,
     const TipProfile & profile) const
   {
     Candidate c;
@@ -1251,7 +1251,7 @@ private:
     c.center_y_ratio = c.center.y / static_cast<double>(std::max(1, local_detect_roi.height));
 
     double depth_sum = 0.0;
-    double diff_sum = 0.0;
+    double delta_sum = 0.0;
 
     for (int yy = y; yy < y + h; ++yy) {
       for (int xx = x; xx < x + w; ++xx) {
@@ -1271,10 +1271,10 @@ private:
         }
 
         const double z = static_cast<double>(z_f);
-        const double diff = background_depth - z;
+        const double delta = slot_base_depth - z;
 
         depth_sum += z;
-        diff_sum += diff;
+        delta_sum += delta;
         ++c.depth_count;
       }
     }
@@ -1284,10 +1284,10 @@ private:
 
     if (c.depth_count > 0) {
       c.mean_depth = depth_sum / static_cast<double>(c.depth_count);
-      c.mean_depth_diff = diff_sum / static_cast<double>(c.depth_count);
+      c.mean_depth_delta = delta_sum / static_cast<double>(c.depth_count);
     } else {
       c.mean_depth = 0.0;
-      c.mean_depth_diff = 0.0;
+      c.mean_depth_delta = 0.0;
     }
 
     const double aspect_score = closenessScore(
@@ -1319,8 +1319,8 @@ private:
 
     if (c.depth_count > 0) {
       c.depth_score = clamp01(
-        (c.mean_depth_diff - profile.foreground_min_depth_diff) /
-        std::max(0.005, profile.foreground_min_depth_diff * 5.0));
+        (c.mean_depth_delta - profile.min_depth_delta) /
+        std::max(0.005, profile.min_depth_delta * 5.0));
     } else {
       c.depth_score = 0.0;
     }
@@ -1400,9 +1400,9 @@ private:
     }
 
     if (profile.require_depth_for_candidate &&
-        c.mean_depth_diff < profile.foreground_min_depth_diff)
+        c.mean_depth_delta < profile.min_depth_delta)
     {
-      c.rejected_reason = "diff_small";
+      c.rejected_reason = "delta_small";
       return c;
     }
 
@@ -1434,7 +1434,7 @@ private:
     const cv::Mat & color_depth,
     const cv::Mat & dark_mask,
     const cv::Rect & detect_roi,
-    const double background_depth,
+    const double slot_base_depth,
     const TipProfile & profile,
     int & raw_component_count,
     int & accepted_candidate_count) const
@@ -1476,7 +1476,7 @@ private:
         color_depth(detect_roi),
         dark_mask(detect_roi),
         cv::Rect(0, 0, detect_roi.width, detect_roi.height),
-        background_depth,
+        slot_base_depth,
         profile);
 
       if (!local.exists) {
@@ -1547,7 +1547,7 @@ private:
 
   cv::Mat selectSingleDebugMask(
     const cv::Mat & distance_mask,
-    const cv::Mat & foreground_mask,
+    const cv::Mat & depth_candidate_mask,
     const cv::Mat & dark_mask,
     const cv::Mat & candidate_mask,
     const cv::Rect & detect_roi) const
@@ -1560,7 +1560,7 @@ private:
     }
 
     if (display_mask_mode_ == "foreground") {
-      foreground_mask(detect_roi).copyTo(debug_mask(detect_roi));
+      depth_candidate_mask(detect_roi).copyTo(debug_mask(detect_roi));
       return debug_mask;
     }
 
@@ -1575,7 +1575,7 @@ private:
     }
 
     cv::Mat combined;
-    cv::bitwise_or(distance_mask, foreground_mask, combined);
+    cv::bitwise_or(distance_mask, depth_candidate_mask, combined);
     cv::bitwise_or(combined, dark_mask, combined);
     cv::bitwise_or(combined, candidate_mask, combined);
     combined(detect_roi).copyTo(debug_mask(detect_roi));
@@ -1604,18 +1604,18 @@ private:
     const cv::Mat & color_depth,
     const cv::Mat & distance_mask,
     const cv::Rect & detect_roi,
-    const double background_depth) const
+    const double slot_base_depth) const
   {
     ProfileEvaluation ev;
     ev.name = name;
     ev.profile = profile;
 
-    ev.foreground_mask = buildForegroundMask(color_depth, detect_roi, background_depth, profile);
+    ev.depth_candidate_mask = buildDepthCandidateMask(color_depth, detect_roi, slot_base_depth, profile);
     ev.dark_mask = buildDarkMask(preview_bgr, detect_roi, profile);
     ev.candidate_mask = buildCandidateMask(
-      distance_mask, ev.foreground_mask, ev.dark_mask, detect_roi, profile);
+      distance_mask, ev.depth_candidate_mask, ev.dark_mask, detect_roi, profile);
 
-    ev.foreground_pixels = cv::countNonZero(ev.foreground_mask(detect_roi));
+    ev.depth_candidate_pixels = cv::countNonZero(ev.depth_candidate_mask(detect_roi));
     ev.dark_pixels = cv::countNonZero(ev.dark_mask(detect_roi));
     ev.candidate_pixels = cv::countNonZero(ev.candidate_mask(detect_roi));
 
@@ -1624,7 +1624,7 @@ private:
       color_depth,
       ev.dark_mask,
       detect_roi,
-      background_depth,
+      slot_base_depth,
       profile,
       ev.raw_component_count,
       ev.accepted_candidate_count);
@@ -1828,11 +1828,11 @@ private:
       color_depth,
       distance_mask);
 
-    int background_valid_count = 0;
-    const double background_depth = estimateBackgroundDepth(
+    int slot_base_valid_count = 0;
+    const double slot_base_depth = estimateSlotBaseDepth(
       color_depth,
       display_roi,
-      background_valid_count);
+      slot_base_valid_count);
 
     ProfileEvaluation main_eval;
 
@@ -1846,10 +1846,10 @@ private:
     if (tip_type == "fist" && enable_fist_dual_profile_) {
       ProfileEvaluation body_eval = evaluateProfile(
         "fist_body", fist_body_profile_, preview_bgr, color_depth, distance_mask,
-        detect_roi, background_depth);
+        detect_roi, slot_base_depth);
       ProfileEvaluation stem_eval = evaluateProfile(
         "fist_stem", fist_stem_profile_, preview_bgr, color_depth, distance_mask,
-        detect_roi, background_depth);
+        detect_roi, slot_base_depth);
 
       int stem_support_dark_pixels = 0;
       double stem_support_dark_ratio = 0.0;
@@ -1873,10 +1873,10 @@ private:
       }
 
       main_eval.name = "fist_dual";
-      main_eval.foreground_mask = orMaskSafe(body_eval.foreground_mask, stem_eval.foreground_mask);
+      main_eval.depth_candidate_mask = orMaskSafe(body_eval.depth_candidate_mask, stem_eval.depth_candidate_mask);
       main_eval.dark_mask = orMaskSafe(body_eval.dark_mask, stem_eval.dark_mask);
       main_eval.candidate_mask = orMaskSafe(body_eval.candidate_mask, stem_eval.candidate_mask);
-      main_eval.foreground_pixels = cv::countNonZero(main_eval.foreground_mask(detect_roi));
+      main_eval.depth_candidate_pixels = cv::countNonZero(main_eval.depth_candidate_mask(detect_roi));
       main_eval.dark_pixels = cv::countNonZero(main_eval.dark_mask(detect_roi));
       main_eval.candidate_pixels = cv::countNonZero(main_eval.candidate_mask(detect_roi));
       main_eval.raw_component_count = body_eval.raw_component_count + stem_eval.raw_component_count;
@@ -1912,10 +1912,10 @@ private:
     } else if (tip_type == "spear" && spear_enable_dual_profile_) {
       ProfileEvaluation body_eval = evaluateProfile(
         "spear_body", spear_body_profile_, preview_bgr, color_depth, distance_mask,
-        detect_roi, background_depth);
+        detect_roi, slot_base_depth);
       ProfileEvaluation stem_eval = evaluateProfile(
         "spear_stem", spear_stem_profile_, preview_bgr, color_depth, distance_mask,
-        detect_roi, background_depth);
+        detect_roi, slot_base_depth);
 
       int stem_support_dark_pixels = 0;
       double stem_support_dark_ratio = 0.0;
@@ -1946,10 +1946,10 @@ private:
       }
 
       main_eval.name = "spear_dual";
-      main_eval.foreground_mask = orMaskSafe(body_eval.foreground_mask, stem_eval.foreground_mask);
+      main_eval.depth_candidate_mask = orMaskSafe(body_eval.depth_candidate_mask, stem_eval.depth_candidate_mask);
       main_eval.dark_mask = orMaskSafe(body_eval.dark_mask, stem_eval.dark_mask);
       main_eval.candidate_mask = orMaskSafe(body_eval.candidate_mask, stem_eval.candidate_mask);
-      main_eval.foreground_pixels = cv::countNonZero(main_eval.foreground_mask(detect_roi));
+      main_eval.depth_candidate_pixels = cv::countNonZero(main_eval.depth_candidate_mask(detect_roi));
       main_eval.dark_pixels = cv::countNonZero(main_eval.dark_mask(detect_roi));
       main_eval.candidate_pixels = cv::countNonZero(main_eval.candidate_mask(detect_roi));
       main_eval.raw_component_count = body_eval.raw_component_count + stem_eval.raw_component_count;
@@ -1985,17 +1985,17 @@ private:
     } else {
       main_eval = evaluateProfile(
         tip_type, profile, preview_bgr, color_depth, distance_mask,
-        detect_roi, background_depth);
+        detect_roi, slot_base_depth);
       active_profile_name = tip_type;
       main_eval_raw_present = main_eval.rawPresent();
     }
 
-    cv::Mat foreground_mask = main_eval.foreground_mask;
+    cv::Mat depth_candidate_mask = main_eval.depth_candidate_mask;
     cv::Mat dark_mask = main_eval.dark_mask;
     cv::Mat candidate_mask = main_eval.candidate_mask;
 
     const int distance_pixels = cv::countNonZero(distance_mask(detect_roi));
-    const int foreground_pixels = main_eval.foreground_pixels;
+    const int depth_candidate_pixels = main_eval.depth_candidate_pixels;
     const int dark_pixels = main_eval.dark_pixels;
     const int candidate_pixels = main_eval.candidate_pixels;
 
@@ -2011,10 +2011,10 @@ private:
 
     if (display_mask_mode_ == "all") {
       cv::Mat dist_vis = cv::Mat::zeros(distance_mask.size(), CV_8UC1);
-      cv::Mat fg_vis = cv::Mat::zeros(foreground_mask.size(), CV_8UC1);
+      cv::Mat fg_vis = cv::Mat::zeros(depth_candidate_mask.size(), CV_8UC1);
       cv::Mat dark_vis = cv::Mat::zeros(dark_mask.size(), CV_8UC1);
       distance_mask(detect_roi).copyTo(dist_vis(detect_roi));
-      foreground_mask(detect_roi).copyTo(fg_vis(detect_roi));
+      depth_candidate_mask(detect_roi).copyTo(fg_vis(detect_roi));
       dark_mask(detect_roi).copyTo(dark_vis(detect_roi));
       overlayMaskColor(overlay, dist_vis, cv::Scalar(255, 0, 0), detect_roi);      // blue
       overlayMaskColor(overlay, fg_vis, cv::Scalar(0, 255, 0), detect_roi);        // green
@@ -2023,7 +2023,7 @@ private:
     } else {
       cv::Mat debug_mask = selectSingleDebugMask(
         distance_mask,
-        foreground_mask,
+        depth_candidate_mask,
         dark_mask,
         candidate_mask,
         detect_roi);
@@ -2083,7 +2083,7 @@ private:
     drawText(
       preview_bgr,
       "dist:" + std::to_string(distance_pixels) +
-        " fg:" + std::to_string(foreground_pixels) +
+        " depth_cand:" + std::to_string(depth_candidate_pixels) +
         " dark:" + std::to_string(dark_pixels) +
         " cand:" + std::to_string(candidate_pixels),
       108,
@@ -2092,8 +2092,8 @@ private:
 
     drawText(
       preview_bgr,
-      "bg:" + std::to_string(background_depth).substr(0, 5) +
-        " valid:" + std::to_string(background_valid_count) +
+      "bg:" + std::to_string(slot_base_depth).substr(0, 5) +
+        " valid:" + std::to_string(slot_base_valid_count) +
         " comp:" + std::to_string(raw_component_count) +
         " pass:" + std::to_string(accepted_candidate_count),
       132,
@@ -2106,7 +2106,7 @@ private:
         "best:" + best.rejected_reason +
           " score:" + std::to_string(best.final_score).substr(0, 5) +
           "/" + std::to_string(profile.min_candidate_score).substr(0, 5) +
-          " diff:" + std::to_string(best.mean_depth_diff).substr(0, 5) +
+          " diff:" + std::to_string(best.mean_depth_delta).substr(0, 5) +
           " area:" + std::to_string(best.area),
         156,
         cv::Scalar(0, 255, 255),
@@ -2164,7 +2164,7 @@ private:
       this->get_logger(),
       *this->get_clock(),
       2000,
-      "slot=%d expected=%s profile=%s present=%s raw=%s stable=%s mode=%s cand_mode=%s dist=%d fg=%d dark=%d cand=%d bg=%.3f bg_valid=%d comp=%d pass=%d best=%s accepted=%s reason=%s score=%.3f diff=%.3f area=%d bbox=(%d,%d,%d,%d) pos=(%.2f,%.2f) dark_ratio=%.2f depth_count=%d",
+      "slot=%d expected=%s profile=%s present=%s raw=%s stable=%s mode=%s cand_mode=%s dist=%d depth_cand=%d dark=%d cand=%d base=%.3f base_valid=%d comp=%d pass=%d best=%s accepted=%s reason=%s score=%.3f delta=%.3f area=%d bbox=(%d,%d,%d,%d) pos=(%.2f,%.2f) dark_ratio=%.2f depth_count=%d",
       current_slot_id_,
       tip_type.c_str(),
       active_profile_name.c_str(),
@@ -2174,18 +2174,18 @@ private:
       display_mask_mode_.c_str(),
       profile.candidate_mask_mode.c_str(),
       distance_pixels,
-      foreground_pixels,
+      depth_candidate_pixels,
       dark_pixels,
       candidate_pixels,
-      background_depth,
-      background_valid_count,
+      slot_base_depth,
+      slot_base_valid_count,
       raw_component_count,
       accepted_candidate_count,
       best.exists ? "true" : "false",
       best.accepted ? "true" : "false",
       best.rejected_reason.c_str(),
       best.final_score,
-      best.mean_depth_diff,
+      best.mean_depth_delta,
       best.area,
       best.bbox.x,
       best.bbox.y,
@@ -2249,9 +2249,9 @@ private:
   double valid_depth_min_{0.12};
   double valid_depth_max_{0.70};
 
-  double background_percentile_{0.75};
-  int min_background_valid_pixels_{50};
-  double foreground_max_depth_diff_{0.18};
+  double slot_base_percentile_{0.75};
+  int min_slot_base_valid_pixels_{50};
+  double max_depth_delta_{0.18};
 
   int morph_open_size_{0};
   int morph_close_size_{5};

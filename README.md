@@ -421,7 +421,7 @@ reason=accepted_reference_diff
 ```text
 profile=palm
 profile=palm_expanded_reject
-cand_mode=foreground_and_dark
+cand_mode=depth_candidate_and_dark
 ```
 
 说明没有进入 reference diff，需要检查：
@@ -518,15 +518,15 @@ palm_reference_slot4_min_fill_ratio: 0.08
 
 ## 12. 深度差 diff 的含义
 
-普通检测策略中，节点会在 ROI 内估计背景深度，并计算：
+普通检测策略中，节点会在 ROI 内估计 slot 基准深度，并计算：
 
 ```text
-diff = background_depth - current_pixel_depth
+delta = slot_base_depth - current_pixel_depth
 ```
 
 其中：
 
-* `background_depth`：ROI 内估计出来的背景深度；
+* `slot_base_depth`：当前阶段仍由 ROI 深度统计得到的 slot 基准深度；
 * `current_pixel_depth`：当前像素的深度；
 * `diff`：当前像素比背景更靠近相机的距离。
 
@@ -537,7 +537,7 @@ diff = background_depth - current_pixel_depth
 示例：
 
 ```text
-背景深度：0.470 m
+slot 基准深度：0.470 m
 端头像素深度：0.430 m
 diff = 0.470 - 0.430 = 0.040 m
 ```
@@ -637,7 +637,7 @@ stable_enabled: true
 | height_small | 高度比例太小 |
 | fill_small | 填充率太低 |
 | no_depth | 候选区域没有有效深度 |
-| diff_small | 深度前景差不够 |
+| delta_small | 深度 delta 不够 |
 | roi_edge | 候选太靠近 ROI 边缘 |
 | dark_low | 暗色比例不足 |
 | No candidate passes thresholds | 没有候选通过阈值 |

@@ -25,9 +25,9 @@ current_tip_detector_node:
     valid_depth_min: 0.30
     valid_depth_max: 0.70
 
-    background_percentile: 0.75
-    min_background_valid_pixels: 50
-    foreground_max_depth_diff: 0.18
+    slot_base_percentile: 0.75
+    min_slot_base_valid_pixels: 50
+    max_depth_delta: 0.18
 
     morph_open_size: 0
     morph_close_size: 5
@@ -41,8 +41,8 @@ current_tip_detector_node:
 
     detect_roi_height_ratio: 1.0
 
-    # distance / foreground / dark / candidate / combined / all
-    # all: 同时看 distance、foreground、dark；最适合调试。
+    # distance / depth_candidate / dark / candidate / combined / all
+    # all: 同时看 distance、depth_candidate、dark；最适合调试。
     display_mask_mode: "all"
     debug_show_roi_info: false
 
@@ -90,8 +90,8 @@ current_tip_detector_node:
     # 偏向矛尖主体：高、窄、暗色面积明显，形状接近竖向菱形。
     # 新版 cpp 使用 spear_body_ 前缀；不要再用旧的 spear_ 前缀控制双 profile。
     ############################################################
-    spear_body_candidate_mask_mode: "foreground_or_dark"
-    spear_body_foreground_min_depth_diff: 0.008
+    spear_body_candidate_mask_mode: "depth_candidate_or_dark"
+    spear_body_min_depth_delta: 0.008
     spear_body_min_component_area: 3000
     spear_body_min_candidate_score: 0.30
     spear_body_max_component_area_ratio: 0.48
@@ -143,8 +143,8 @@ current_tip_detector_node:
     # 这套用于补 spear 在矛尖主体和连接杆交界处容易断检的问题。
     # 但它不能单独确认 spear，必须通过上面的 body_support 检查。
     ############################################################
-    spear_stem_candidate_mask_mode: "foreground_and_dark"
-    spear_stem_foreground_min_depth_diff: 0.010
+    spear_stem_candidate_mask_mode: "depth_candidate_and_dark"
+    spear_stem_min_depth_delta: 0.010
     spear_stem_min_component_area: 10
     spear_stem_min_candidate_score: 0.34
     spear_stem_max_component_area_ratio: 0.13
@@ -207,15 +207,15 @@ current_tip_detector_node:
     # 偏向拳体主体：块状、暗色面积大、形状更接近方块。
     # 新版 cpp 使用 fist_body_ 前缀；不要再用旧的 fist_ 前缀。
     ############################################################
-    fist_body_candidate_mask_mode: "foreground_or_dark"
+    fist_body_candidate_mask_mode: "depth_candidate_or_dark"
     fist_body_min_component_area: 9000
     fist_body_min_candidate_score: 0.28
     fist_body_max_component_area_ratio: 0.40
     fist_body_require_depth_for_candidate: true
 
-    fist_body_enable_depth_behind_veto: true
-    fist_body_depth_behind_veto_min_count: 120
-    fist_body_depth_behind_veto_max_diff: 0.006
+    fist_body_enable_depth_too_far_veto: true
+    fist_body_depth_too_far_veto_min_count: 120
+    fist_body_depth_too_far_veto_max_delta: 0.006
 
     fist_body_ideal_aspect_w_over_h: 0.85
     fist_body_aspect_tolerance: 1.05
@@ -266,8 +266,8 @@ current_tip_detector_node:
     # 这套用于补 fist 在主体和杆子交界处容易断检的问题。
     # 但它不能单独确认 fist，必须通过上面的 body_support 检查。
     ############################################################
-    fist_stem_candidate_mask_mode: "foreground_and_dark"
-    fist_stem_foreground_min_depth_diff: 0.006
+    fist_stem_candidate_mask_mode: "depth_candidate_and_dark"
+    fist_stem_min_depth_delta: 0.006
     fist_stem_min_component_area: 300
     fist_stem_min_candidate_score: 0.42
     fist_stem_max_component_area_ratio: 0.13

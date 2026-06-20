@@ -67,10 +67,10 @@ void PreviewDebugger::draw(
   cv::Mat overlay = preview_bgr.clone();
 
   if (config_.display_mask_mode == "all") {
-    if (!result.main_eval.foreground_mask.empty()) {
+    if (!result.main_eval.depth_candidate_mask.empty()) {
       overlayMaskColor(
         overlay,
-        result.main_eval.foreground_mask,
+        result.main_eval.depth_candidate_mask,
         cv::Scalar(0, 255, 255),
         detect_roi);
     }
@@ -149,11 +149,11 @@ void PreviewDebugger::draw(
 
   std::ostringstream line3;
   line3 << "dist " << result.distance_pixels
-        << " fg " << ev.foreground_pixels
+        << " depth_cand " << ev.depth_candidate_pixels
         << " dark " << ev.dark_pixels
         << " cond " << ev.candidate_pixels
-        << " bg " << std::fixed << std::setprecision(3) << result.background_depth
-        << " bg_valid " << result.background_valid_count;
+        << " base " << std::fixed << std::setprecision(3) << result.slot_base_depth
+        << " base_valid " << result.slot_base_valid_count;
 
   drawText(preview_bgr, line3.str(), 82, cv::Scalar(255, 255, 255), 0.48, 2);
 
@@ -174,7 +174,7 @@ void PreviewDebugger::draw(
   drawText(preview_bgr, line5.str(), 130, cv::Scalar(255, 255, 255), 0.48, 2);
 
   std::ostringstream line6;
-  line6 << "diff " << std::fixed << std::setprecision(3) << best.mean_depth_diff
+  line6 << "delta " << std::fixed << std::setprecision(3) << best.mean_depth_delta
         << " area " << best.area
         << " bbox (" << best.bbox.x << "," << best.bbox.y << ","
         << best.bbox.width << "," << best.bbox.height << ")";
@@ -273,8 +273,8 @@ cv::Mat PreviewDebugger::selectSingleDebugMask(
   }
 
   if (config_.display_mask_mode == "foreground") {
-    if (!result.main_eval.foreground_mask.empty()) {
-      result.main_eval.foreground_mask(detect_roi).copyTo(debug_mask(detect_roi));
+    if (!result.main_eval.depth_candidate_mask.empty()) {
+      result.main_eval.depth_candidate_mask(detect_roi).copyTo(debug_mask(detect_roi));
     }
     return debug_mask;
   }
@@ -295,8 +295,8 @@ cv::Mat PreviewDebugger::selectSingleDebugMask(
 
   cv::Mat combined = cv::Mat::zeros(result.main_eval.candidate_mask.size(), CV_8UC1);
 
-  if (!result.main_eval.foreground_mask.empty()) {
-    cv::bitwise_or(combined, result.main_eval.foreground_mask, combined);
+  if (!result.main_eval.depth_candidate_mask.empty()) {
+    cv::bitwise_or(combined, result.main_eval.depth_candidate_mask, combined);
   }
 
   if (!result.main_eval.dark_mask.empty()) {
