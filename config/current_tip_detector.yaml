@@ -55,10 +55,10 @@ current_tip_detector_node:
       0.640, 0.487, 0.214, 0.389,
 
       # slot 3: palm / 掌
-      0.542, 0.611, 0.208, 0.288,
+      0.700, 0.611, 0.245, 0.288,
 
       # slot 4: palm / 掌
-      0.580, 0.572, 0.180, 0.301,
+      0.580, 0.572, 0.240, 0.301,
 
       # slot 5: fist / 拳
       0.610, 0.500, 0.205, 0.370,
@@ -320,7 +320,69 @@ current_tip_detector_node:
     fist_stem_position_score_weight: 0.18
     fist_stem_dark_score_weight: 0.15
 
-    palm_reference_enable: true
+    ############################################################
+    # palm_body profile
+    # 当前 C++ 里 profile 名仍然是 palm；
+    # 这里把 palm fallback 调成无 reference 的 palm_body 主检测。
+    ############################################################
+    palm_candidate_mask_mode: "depth_candidate_and_dark"
+    palm_min_depth_delta: 0.015
+
+    # 真 palm：area≈11900~12000，bbox≈150x122
+    # slot3 空位误检：area≈230，bbox≈20x30
+    palm_min_component_area: 3000
+    palm_min_candidate_score: 0.38
+
+    # 真 palm 的 area_ratio 大约 0.22~0.24；
+    # 0.45 可以放过真 palm，同时保留 area_large veto。
+    palm_max_component_area_ratio: 0.70
+    palm_enable_area_large_veto: true
+    palm_require_depth_for_candidate: true
+
+    palm_ideal_aspect_w_over_h: 1.25
+    palm_aspect_tolerance: 0.90
+
+    palm_ideal_width_ratio: 0.58
+    palm_width_tolerance: 0.40
+    palm_ideal_height_ratio: 0.58
+    palm_height_tolerance: 0.35
+
+    # 压掉 slot3 空位 20x30 小块。
+    palm_min_width_ratio: 0.30
+    palm_min_height_ratio: 0.30
+    palm_min_fill_ratio: 0.20
+
+    palm_enable_position_score: true
+    palm_ideal_center_x_ratio: 0.50
+    palm_center_x_tolerance: 0.55
+    palm_ideal_center_y_ratio: 0.50
+    palm_center_y_tolerance: 0.55
+
+    # 保留底部横条抑制。
+    palm_enable_roi_edge_suppression: true
+    palm_suppress_left_ratio: 0.00
+    palm_suppress_right_ratio: 0.00
+    palm_suppress_top_ratio: 0.00
+    palm_suppress_bottom_ratio: 0.18
+
+    palm_enable_ignore_mask: false
+
+    palm_enable_rgb_dark_filter: true
+    palm_rgb_dark_filter_mode: "score"
+    palm_dark_gray_threshold: 95
+    palm_min_dark_ratio: 0.20
+
+    palm_shape_score_weight: 0.35
+    palm_depth_score_weight: 0.25
+    palm_area_score_weight: 0.15
+    palm_position_score_weight: 0.15
+    palm_dark_score_weight: 0.10
+
+    ############################################################
+    # palm reference
+    # 默认关闭；仅作为紧急备用方案保留。
+    ############################################################
+    palm_reference_enable: false
 
     palm_reference_slot3_empty_rgb_path: "config/reference/slot3_empty_Color.png"
     palm_reference_slot3_empty_depth_path: "config/reference/slot3_empty_Depth.png"
