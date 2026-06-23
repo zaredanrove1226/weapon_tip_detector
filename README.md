@@ -181,95 +181,90 @@ msg->data
 
 整体流程：
 
-```text
-RealSense RGB-D 输入
-        ↓
-选择当前 slot ROI
-        ↓
-depth-to-color 投影
-        ↓
-根据端头类型选择检测策略
-        ↓
-生成 candidate mask
-        ↓
-连通域筛选
-        ↓
-根据面积、宽高、位置、深度、暗色比例等条件判断
-        ↓
-发布 0 / 1 检测结果
-```
+    RealSense RGB-D 输入
+            ↓
+    选择当前 slot ROI
+            ↓
+    depth-to-color 投影
+            ↓
+    根据端头类型选择检测策略
+            ↓
+    基于 target_distance 生成 depth_candidate
+            ↓
+    结合 dark mask 得到 candidate mask
+            ↓
+    连通域筛选
+            ↓
+    根据面积、宽高、位置、深度、暗色比例等条件判断
+            ↓
+    发布 0 / 1 检测结果
 
 目前三类端头采用不同策略：
 
-```text
-spear：普通 RGB-D 检测 + 双 profile
-fist：普通 RGB-D 检测 + 双 profile
-palm：empty reference diff 检测
-```
+    spear：RGB-D 检测 + spear_body / spear_stem 双 profile
+    fist：RGB-D 检测 + fist_body / fist_stem 双 profile
+    palm：RGB-D 检测 + palm_body 单 profile
 
----
+其中 `palm_reference` 代码和 reference 图片仍然保留，但默认关闭，只作为紧急备用方案。
 
+当前普通检测不再依赖墙面背景深度。`slot_base_depth` 的主要语义是当前运行传入的 `target_distance`，`depth_candidate` 表示位于目标合理深度带内的候选区域。
+
+* * *
 ## 6. ROI 检测
 
 节点不会在整张图上寻找端头，而是只在当前 slot 对应的 ROI 内检测。
 
 ROI 在 yaml 中通过比例配置：
 
-```yaml
-slot_roi_ratios: [
-  # slot 1: spear / 矛尖
-  0.609, 0.082, 0.180, 0.700,
-  # slot 2: fist / 拳
-  0.570, 0.444, 0.223, 0.481,
-  # slot 3: palm / 掌
-  0.542, 0.611, 0.208, 0.288,
-  # slot 4: palm / 掌
-  0.580, 0.572, 0.180, 0.301,
-  # slot 5: fist / 拳
-  0.590, 0.500, 0.190, 0.360,
-  # slot 6: spear / 矛尖
-  0.600, 0.120, 0.170, 0.675
-]
-```
+    slot_roi_ratios: [
+      # slot 1: spear / 矛尖
+      0.695, 0.130, 0.180, 0.700,
+
+      # slot 2: fist / 拳
+      0.640, 0.487, 0.214, 0.389,
+
+      # slot 3: palm / 掌
+      0.700, 0.611, 0.245, 0.288,
+
+      # slot 4: palm / 掌
+      0.580, 0.572, 0.240, 0.301,
+
+      # slot 5: fist / 拳
+      0.610, 0.500, 0.205, 0.370,
+
+      # slot 6: spear / 矛尖
+      0.630, 0.126, 0.193, 0.678
+    ]
 
 每 4 个数表示一个 slot 的 ROI：
 
-```text
-x_ratio, y_ratio, width_ratio, height_ratio
-```
+    x_ratio, y_ratio, width_ratio, height_ratio
 
 使用比例配置的好处是：即使相机分辨率变化，ROI 仍然能大致保持在相同画面区域。
 
 当前流程中：
 
-```text
-slot_roi_ratios
-  ↓
-currentSlotRoi()
-  ↓
-display_roi
-  ↓
-currentDetectRoi()
-  ↓
-detect_roi
-  ↓
-检测器 evaluate(...)
-```
+    slot_roi_ratios
+      ↓
+    currentSlotRoi()
+      ↓
+    display_roi
+      ↓
+    currentDetectRoi()
+      ↓
+    detect_roi
+      ↓
+    检测器 evaluate(...)
 
 如果：
 
-```yaml
-detect_roi_height_ratio: 1.0
-```
+    detect_roi_height_ratio: 1.0
 
 则：
 
-```text
-detect_roi == display_roi
-```
+    detect_roi == display_roi
 
----
-
+* * *
 ## 7. spear 检测策略
 
 `spear` 使用普通 RGB-D 检测，并采用双 profile：
@@ -287,13 +282,13 @@ spear_stem：偏向检测连接杆 / 底座区域
 当前主要依赖：
 
 * ROI；
-* foreground / dark mask；
+* depth_candidate / dark mask；
 * 连通域面积；
 * 宽高比例；
 * 位置评分；
 * 暗色比例；
 * ignore mask；
-* head support 约束。
+* body support 约束。
 
 `spear` 当前已经调通，主要改动集中在：
 
@@ -333,7 +328,7 @@ fist_stem：偏向检测连接杆 / 下半部分
 当前主要依赖：
 
 * ROI；
-* foreground / dark mask；
+* depth_candidate / dark mask；
 * 连通域面积；
 * 深度有效性；
 * 宽高比例；
@@ -386,166 +381,177 @@ present=true
 
 ---
 
-## 9. palm 检测策略：empty reference diff
+## 9. palm 检测策略：palm_body 无 reference 主检测
 
-`palm` 当前不再使用旧的 palm_body / palm_stem / palm_core / palm_expanded / density 策略。
+`palm` 当前默认不依赖 empty reference 图片，而是使用普通 RGB-D 检测流程中的单 profile：
 
-现在 palm 统一使用 **empty reference diff**：
+    palm_body
 
-```text
-当前图像 - 当前 slot 的空位 reference 图像 = diff
-```
+当前 C++ 中日志仍显示：
 
-然后在当前 slot ROI 内，根据 RGB diff / depth diff 得到 candidate mask，再筛选连通域。
+    profile=palm
 
-当前只在以下条件满足时走 `PalmReferenceDetector`：
+但语义上它已经被调成无 reference 的 palm 主体检测。
 
-```text
-palm_reference_enable == true
-tip_type == "palm"
-current_slot_id == 3 或 4
-```
+`palm_body` 当前主要依赖：
 
-其他 slot 仍然走普通 detection pipeline。
+  * ROI；
+  * `target_distance` 附近的 `depth_candidate`；
+  * dark mask；
+  * 连通域面积；
+  * 宽高比例；
+  * fill ratio；
+  * 位置评分；
+  * ROI edge suppression。
+
+当前 palm 的核心判断思路：
+
+    真 palm 主体：面积较大、bbox 接近块状、dark_ratio 高、depth_count 稳定
+    空位小噪声：面积小、bbox 小，应被 area_small / width_small / height_small 拒绝
+    底部横条：应被 roi_edge 或形状约束拒绝
+
+当前默认配置：
+
+    palm_reference_enable: false
+
+因此比赛或演示默认流程不需要现场采集 empty reference 图片。
 
 成功日志通常类似：
 
-```text
-profile=palm_reference_diff
-cand_mode=reference_diff
-reason=accepted_reference_diff
-```
+    slot=3 expected=palm profile=palm
+    cand_mode=depth_candidate_and_dark
+    reason=accepted
+    present=true
 
-如果 palm 日志出现普通旧 profile，例如：
+如果 palm 在位但检测不到，优先查看：
 
-```text
-profile=palm
-profile=palm_expanded_reject
-cand_mode=depth_candidate_and_dark
-```
+    reason
+    area
+    bbox
+    score
+    dark_ratio
+    depth_count
 
-说明没有进入 reference diff，需要检查：
+常见处理：
 
-* `palm_reference_enable`；
-* current slot 是否为 3 / 4；
-* reference 图片是否加载成功；
-* 文件路径是否正确。
+  * `reason=area_large`：适当提高 `palm_max_component_area_ratio`；
+  * `reason=area_small`：检查候选是否只抓到局部，必要时降低 `palm_min_component_area`；
+  * `reason=width_small` / `height_small`：检查 ROI 是否截断 palm；
+  * `reason=roi_edge`：检查是否被底部横条抑制误杀；
+  * `reason=score_low`：先看各项硬门槛，不要直接大幅降低总分阈值。
 
----
+* * *
 
-## 10. palm reference 图片
+## 10. palm reference 备用方案
 
-slot3 和 slot4 的 palm 必须分别采集 empty reference，因为相机视角、ROI 和背景都不同。
+`palm_reference` 代码、参数和 reference 图片仍然保留，但默认不使用。
 
 当前 reference 文件：
 
-```text
-config/reference/slot3_empty_Color.png
-config/reference/slot3_empty_Depth.png
-config/reference/slot4_empty_Color.png
-config/reference/slot4_empty_Depth.png
-```
+    config/reference/slot3_empty_Color.png
+    config/reference/slot3_empty_Depth.png
+    config/reference/slot4_empty_Color.png
+    config/reference/slot4_empty_Depth.png
 
 对应 yaml：
 
-```yaml
-palm_reference_slot3_empty_rgb_path: "config/reference/slot3_empty_Color.png"
-palm_reference_slot3_empty_depth_path: "config/reference/slot3_empty_Depth.png"
-palm_reference_slot4_empty_rgb_path: "config/reference/slot4_empty_Color.png"
-palm_reference_slot4_empty_depth_path: "config/reference/slot4_empty_Depth.png"
-```
+    palm_reference_slot3_empty_rgb_path: "config/reference/slot3_empty_Color.png"
+    palm_reference_slot3_empty_depth_path: "config/reference/slot3_empty_Depth.png"
+    palm_reference_slot4_empty_rgb_path: "config/reference/slot4_empty_Color.png"
+    palm_reference_slot4_empty_depth_path: "config/reference/slot4_empty_Depth.png"
 
-启动时应看到：
+只有在手动设置：
 
-```text
-Palm reference slot3 load: ok
-Palm reference slot4 load: ok
-```
+    palm_reference_enable: true
 
-如果看到：
+并且当前 slot 是 3 或 4 时，palm 才会走 `PalmReferenceDetector`。
 
-```text
-Palm reference slot3 load: failed
-Palm reference images not loaded for slot 3. Using normal detection.
-```
+reference diff 成功日志通常类似：
 
-说明 slot3 reference 图片没有被正确加载，节点会退回普通检测逻辑。
+    profile=palm_reference_diff
+    cand_mode=reference_diff
+    reason=accepted_reference_diff
 
----
+使用原则：
 
-## 11. palm reference 参数
+  * 默认不要依赖 reference；
+  * 比赛现场优先使用 `palm_body` 无 reference 检测；
+  * 只有无 reference 在特殊光照或场地中实在不稳时，才临时启用 reference；
+  * 启用 reference 时，slot3 和 slot4 必须分别采集空位图片。
 
-当前 palm slot3 参数示例：
+* * *
 
-```yaml
-palm_reference_slot3_empty_rgb_path: "config/reference/slot3_empty_Color.png"
-palm_reference_slot3_empty_depth_path: "config/reference/slot3_empty_Depth.png"
-palm_reference_slot3_dark_gray_threshold: 90
-palm_reference_slot3_rgb_diff_threshold: 35
-palm_reference_slot3_depth_delta: 0.04
-palm_reference_slot3_allow_depth_hole: true
-palm_reference_slot3_min_area: 3000
-palm_reference_slot3_min_width: 54
-palm_reference_slot3_min_height: 35
-palm_reference_slot3_min_aspect_ratio: 0.35
-palm_reference_slot3_min_fill_ratio: 0.05
-```
+## 11. palm_body 主要参数
 
-当前 palm slot4 参数示例：
+当前 palm_body 参数集中在 yaml 的 `palm_` 前缀下。
 
-```yaml
-palm_reference_slot4_empty_rgb_path: "config/reference/slot4_empty_Color.png"
-palm_reference_slot4_empty_depth_path: "config/reference/slot4_empty_Depth.png"
-palm_reference_slot4_dark_gray_threshold: 90
-palm_reference_slot4_rgb_diff_threshold: 35
-palm_reference_slot4_depth_delta: 0.04
-palm_reference_slot4_allow_depth_hole: true
-palm_reference_slot4_min_area: 3000
-palm_reference_slot4_min_width: 80
-palm_reference_slot4_min_height: 40
-palm_reference_slot4_min_aspect_ratio: 0.45
-palm_reference_slot4_min_fill_ratio: 0.08
-```
+核心参数：
 
-调参原则：
+    palm_candidate_mask_mode: "depth_candidate_and_dark"
+    palm_min_component_area: 3000
+    palm_min_candidate_score: 0.38
+    palm_max_component_area_ratio: 0.70
+    palm_enable_area_large_veto: true
+    palm_require_depth_for_candidate: true
 
-* 小螺钉、小碎片误检：优先提高 `min_area`、`min_width`、`min_height`；
-* 端头正常放置检测不到：先看日志中的 `area`、`bbox`、`pass`、`reason`，不要盲目降低全部阈值；
-* slot3 和 slot4 分开调，不共用 reference，也不共用 ROI；
-* 不要重新引入旧 palm 策略。
+用于压掉空位小块：
 
----
+    palm_min_width_ratio: 0.30
+    palm_min_height_ratio: 0.30
+    palm_min_fill_ratio: 0.20
 
-## 12. 深度差 diff 的含义
+用于拒绝底部横条和边缘干扰：
 
-普通检测策略中，节点会在 ROI 内估计 slot 基准深度，并计算：
+    palm_enable_roi_edge_suppression: true
+    palm_suppress_bottom_ratio: 0.18
 
-```text
-delta = slot_base_depth - current_pixel_depth
-```
+当前 palm 调参原则：
 
-其中：
+  * 真 palm 在位但 `area_large`：优先提高 `palm_max_component_area_ratio`；
+  * 空位小块误检：优先提高 `palm_min_component_area`、`palm_min_width_ratio`、`palm_min_height_ratio`；
+  * 底部横条误检：优先检查 `palm_suppress_bottom_ratio` 和 ROI；
+  * 不重新引入 `palm_core` / `palm_expanded` / density 多阶段方案；
+  * 不把 palm 拆成 `palm_body + palm_stem`，当前 palm 是单 profile 主体检测。
 
-* `slot_base_depth`：当前阶段仍由 ROI 深度统计得到的 slot 基准深度；
-* `current_pixel_depth`：当前像素的深度；
-* `diff`：当前像素比背景更靠近相机的距离。
+* * *
 
-如果端头比背景更靠近相机，`diff` 会比较大。
+## 12. 深度 delta / depth_candidate 的含义
 
-如果是背景平面、墙面、阴影或纹理，`diff` 通常比较小。
+普通检测策略中，当前 `slot_base_depth` 主要来自运行时传入的 `target_distance`：
 
-示例：
+    ros2 launch weapon_tip_detector current_tip_detector.launch.py current_slot_id:=3 target_distance:=0.50
 
-```text
-slot 基准深度：0.470 m
-端头像素深度：0.430 m
-diff = 0.470 - 0.430 = 0.040 m
-```
+此时日志中通常应看到：
 
-在 reference diff 检测中，日志里的 `diff` 不一定是主要判断依据。palm 更主要看 reference diff 后形成的 candidate mask 和连通域筛选结果。
+    base=0.500
 
----
+`depth_candidate` 的语义是：
 
+    当前像素深度位于 target_distance 附近的合理深度带内
+
+它不再表示“比墙面背景更靠近相机”。
+
+日志中的 `delta` 仍然可以辅助观察目标深度和 `target_distance` 的关系，但它不再是旧版“墙背景 foreground diff”的核心依据。
+
+当前更应该优先关注：
+
+    cand_mode
+    area
+    bbox
+    score
+    dark_ratio
+    depth_count
+    reason
+
+如果换场地或相机安装位置变化，首先应调整：
+
+    target_distance
+    distance_tolerance
+    slot_roi_ratios
+
+而不是重新引入墙面背景差分逻辑。
+
+* * *
 ## 13. OpenCV 调试窗口
 
 OpenCV 窗口只用于开发和调参阶段，方便观察：
@@ -685,7 +691,7 @@ colcon build --packages-select weapon_tip_detector --symlink-install
 source install/setup.bash
 ```
 
-如果只是修改 yaml，一般重新 source 后重新 launch 即可。
+如果只是修改 yaml，且使用 `--symlink-install` 编译，一般重新 source 后重新 launch 即可；如果不是 symlink-install，则需要重新 build，确保 install 目录中的配置也被更新。
 
 ---
 
@@ -760,81 +766,77 @@ ros2 topic pub /weapon_tip_detector/current_slot_id std_msgs/msg/UInt8 "{data: 3
 
 当前版本已经对原来的单文件检测节点进行了结构重构。主要结构如下：
 
-```text
-weapon_tip_detector
-├── CMakeLists.txt
-├── package.xml
-├── README.md
-├── config
-│   ├── current_tip_detector.yaml
-│   └── reference
-│       ├── slot3_empty_Color.png
-│       ├── slot3_empty_Depth.png
-│       ├── slot4_empty_Color.png
-│       └── slot4_empty_Depth.png
-├── launch
-│   └── current_tip_detector.launch.py
-├── include
-│   └── weapon_tip_detector
-│       ├── depth_projector.hpp
-│       ├── detection_pipeline.hpp
-│       ├── detector_profiles.hpp
-│       ├── detector_types.hpp
-│       ├── detector_utils.hpp
-│       ├── palm_reference_detector.hpp
-│       └── preview_debugger.hpp
-└── src
-    ├── current_tip_detector_node.cpp
-    ├── current_tip_detector_node_refactored.cpp
-    ├── depth_projector.cpp
-    ├── detection_pipeline.cpp
-    ├── detector_profiles.cpp
-    ├── detector_utils.cpp
-    ├── palm_reference_detector.cpp
-    └── preview_debugger.cpp
-```
+    weapon_tip_detector
+    ├── CMakeLists.txt
+    ├── package.xml
+    ├── README.md
+    ├── config
+    │   ├── current_tip_detector.yaml
+    │   └── reference
+    │       ├── slot3_empty_Color.png
+    │       ├── slot3_empty_Depth.png
+    │       ├── slot4_empty_Color.png
+    │       └── slot4_empty_Depth.png
+    ├── launch
+    │   └── current_tip_detector.launch.py
+    ├── include
+    │   └── weapon_tip_detector
+    │       ├── depth_projector.hpp
+    │       ├── detection_pipeline.hpp
+    │       ├── detector_profiles.hpp
+    │       ├── detector_types.hpp
+    │       ├── detector_utils.hpp
+    │       ├── palm_reference_detector.hpp
+    │       └── preview_debugger.hpp
+    └── src
+        ├── current_tip_detector_node.cpp
+        ├── current_tip_detector_node_refactored.cpp
+        ├── depth_projector.cpp
+        ├── detection_pipeline.cpp
+        ├── detector_profiles.cpp
+        ├── detector_utils.cpp
+        ├── palm_reference_detector.cpp
+        └── preview_debugger.cpp
 
 说明：
 
-* `current_tip_detector_node.cpp`：旧版历史文件，保留作参考；
-* `current_tip_detector_node_refactored.cpp`：当前实际使用的主节点；
-* `detection_pipeline.*`：普通 spear / fist 检测流程；
-* `palm_reference_detector.*`：palm empty reference diff 检测流程；
-* `detector_profiles.*`：端头 profile 默认参数；
-* `detector_types.*`：检测结构体和数据类型；
-* `preview_debugger.*`：OpenCV 调试窗口绘制；
-* `depth_projector.*`：深度到彩色图坐标投影相关逻辑。
+  * `current_tip_detector_node.cpp`：旧版历史文件，保留作参考；
+  * `current_tip_detector_node_refactored.cpp`：当前实际使用的主节点；
+  * `detection_pipeline.*`：普通 spear / fist / palm_body RGB-D 检测流程；
+  * `palm_reference_detector.*`：palm empty reference diff 备用检测流程；
+  * `detector_profiles.*`：端头 profile 默认参数；
+  * `detector_types.*`：检测结构体和数据类型；
+  * `preview_debugger.*`：OpenCV 调试窗口绘制；
+  * `depth_projector.*`：深度到彩色图坐标投影相关逻辑。
 
----
-
+* * *
 ## 20. 当前项目状态
 
 当前版本完成了：
 
-* RealSense RGB-D 输入；
-* 当前 slot ROI 检测；
-* depth-to-color 投影；
-* spear 双 profile；
-* fist 双 profile；
-* palm empty reference diff；
-* slot3 / slot4 palm 独立 reference；
-* OpenCV 调试显示；
-* stable 历史帧判断；
-* `/weapon_tip_detector/current_present` 结果输出；
-* 与串口节点通过 ROS topic 对接；
-* 代码结构重构，检测流程已从原来的单文件节点拆分为多个功能模块。
+  * RealSense RGB-D 输入；
+  * 当前 slot ROI 检测；
+  * depth-to-color 投影；
+  * spear 双 profile；
+  * fist 双 profile；
+  * palm_body 无 reference 单 profile；
+  * palm reference diff 备用方案保留；
+  * OpenCV 调试显示；
+  * stable 历史帧判断；
+  * `/weapon_tip_detector/current_present` 结果输出；
+  * 与串口节点通过 ROS topic 对接；
+  * 代码结构重构，检测流程已从原来的单文件节点拆分为多个功能模块。
 
 当前调试结论：
 
-* `spear`：已通过 ROI 和 profile 参数调通；
-* `fist`：已通过 body / stem 参数加严减少误检；
-* `palm`：已切换到 reference diff 策略，slot3 和 slot4 分别使用独立 empty reference；
-* 旧 palm_body / palm_stem / palm_core / palm_expanded / density 策略已经废弃，不应再恢复。
+  * `spear`：已通过 `spear_body + spear_stem` 双 profile 调通；
+  * `fist`：已通过 `fist_body + fist_stem` 双 profile 调通；
+  * `palm`：默认使用无 reference 的 `palm_body` 单 profile 检测；
+  * `palm reference diff`：代码和 reference 图片保留，但默认关闭，仅作为紧急备用方案；
+  * 当前普通检测不再依赖墙面背景深度，而是基于 `target_distance` 附近的合理深度带生成 `depth_candidate`。
 
 后续开发和调试应以：
 
-```text
-current_tip_detector_node_refactored.cpp
-```
+    current_tip_detector_node_refactored.cpp
 
 为准。
